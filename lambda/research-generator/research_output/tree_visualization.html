@@ -27,6 +27,10 @@
                 background-color: #fff7e6;
                 border-left: 4px solid #fa8c16;
             }
+            .vague-node {
+                background-color: #f9f0ff;
+                border-left: 4px solid #722ed1;
+            }
             .answer-node {
                 background-color: #f6ffed;
                 border-left: 4px solid #52c41a;
@@ -71,6 +75,15 @@
             .max-depth-badge {
                 display: inline-block;
                 background-color: #fa8c16;
+                color: white;
+                font-size: 0.8em;
+                padding: 2px 8px;
+                border-radius: 10px;
+                margin-left: 10px;
+            }
+            .vague-badge {
+                display: inline-block;
+                background-color: #722ed1;
                 color: white;
                 font-size: 0.8em;
                 padding: 2px 8px;
@@ -146,40 +159,43 @@
         
         <div class="tree-container">
     
-    <div class="node question-node" id="c42a1cbb-3ade-4a76-8c43-d3312145a280">
-        <div class="node-header" onclick="toggleNode('c42a1cbb-3ade-4a76-8c43-d3312145a280')">
+    <div class="node question-node vague-node" id="f2852793-157f-4054-8ce5-a7b53242116f">
+        <div class="node-header" onclick="toggleNode('f2852793-157f-4054-8ce5-a7b53242116f')">
             <span class="depth-indicator">Depth 0:</span>
-            <span class="node-title">Question: What is 2+2</span>
+            <span class="node-title">Question: Your complex question</span>
             <span class="toggle-icon">+</span>
         </div>
         <div class="node-content">
-            <button onclick="showDetails('c42a1cbb-3ade-4a76-8c43-d3312145a280', true); event.stopPropagation();">View Details</button>
+            <button onclick="showDetails('f2852793-157f-4054-8ce5-a7b53242116f', true); event.stopPropagation();">View Details</button>
             
+            <span class="vague-badge">Vague Question</span>
         </div>
     
-        <div class="answer-node" id="answer-c42a1cbb-3ade-4a76-8c43-d3312145a280">
+        <div class="answer-node" id="answer-f2852793-157f-4054-8ce5-a7b53242116f">
             <h3>Answer:</h3>
-            <div>Here is a detailed answer to the question "What is 2+2?":
+            <div><div class="note" style="background-color: #e6f7ff; border-left: 4px solid #1890ff; padding: 15px; margin-bottom: 20px;">
+    <strong>Note:</strong> This question is quite vague or general. For more detailed information, consider asking a more specific question.
+    </div><h3>Response to Vague Question</h3>
 
-<h3>What is 2+2?</h3>
+<p>The question you provided is quite vague and lacks the necessary details to provide a specific, detailed answer. In order to give you a more helpful and informative response, I would need additional details and clarification on the specific aspects of the topic you are interested in.</p>
 
-<p>The mathematical expression "2+2" is a simple addition problem that asks what the sum of the numbers 2 and 2 is. In other words, it is asking what number results when you add the quantity 2 to the quantity 2.</p>
+<div class='note'><strong>Why More Details are Needed:</strong> Without more specifics, I can only provide a general, high-level overview of the topic. More details would allow me to tailor the information to your particular needs and interests.</div>
 
-<p>To solve this problem, we can use our knowledge of basic arithmetic. Addition is one of the fundamental mathematical operations, where we combine two or more numbers to get a new, larger number.</p>
+<h3>Suggestions for Making the Question More Specific</h3>
 
-<p>When we add 2 and 2 together, the result is 4. This is because:</p>
+<p>To make the question more specific, you could consider providing additional details such as:</p>
 
-<ol>
-  <li><strong>2</strong> represents a quantity of 2 units.</li>
-  <li><strong>2</strong> also represents a quantity of 2 units.</li>
-  <li>When we add these two quantities together, we get a total of 4 units.</li>
-  <li>Therefore, the answer to the expression "2+2" is <strong>4</strong>.</li>
-</ol>
+<ul>
+  <li>The particular area or sub-topic within the broader subject that you are interested in</li>
+  <li>Any specific questions or aspects you would like me to focus on</li>
+  <li>Any context or background information that would help me understand the context of your query</li>
+  <li>The intended use or application of the information you are seeking</li>
+</ul>
 
-<hr>
+<h3>General Information on the Topic</h3>
 
-<p>In summary, 2+2=4 because when you combine two quantities of 2, the total amount is 4. This is a basic arithmetic fact that is fundamental to mathematics and can be easily verified through simple counting or using visual aids like blocks or fingers.</p></div>
-            <button onclick="showDetails('answer-c42a1cbb-3ade-4a76-8c43-d3312145a280', false); event.stopPropagation();">View Full Answer</button>
+<p>In the meantime, I can provide a brief, general overview of the topic area. [Provide a high-level, general summary of the topic without going into great detail]. However, to give you a more comprehensive and tailored response, I would need you to rephrase your question with more specific details.</p></div>
+            <button onclick="showDetails('answer-f2852793-157f-4054-8ce5-a7b53242116f', false); event.stopPropagation();">View Full Answer</button>
         </div>
         </div>
         </div>

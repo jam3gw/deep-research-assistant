@@ -6,6 +6,7 @@ This allows you to test the function locally before deploying to AWS.
 Usage:
     python test_locally.py "What are the economic and environmental impacts of renewable energy adoption globally?"
     python test_locally.py --threshold 2 "What are the economic and environmental impacts of renewable energy adoption globally?"
+    python test_locally.py --depth 3 --sub-questions 4 --threshold 1 "What are the economic and environmental impacts of renewable energy adoption globally?"
 """
 
 import sys
@@ -23,31 +24,34 @@ from lambda_function import (
     aggregate_answers,
     generate_tree_visualization,
     extract_content,
-    MAX_RECURSION_DEPTH,
-    MAX_SUB_QUESTIONS,
-    RECURSION_THRESHOLD
+    MAX_ALLOWED_RECURSION_DEPTH,
+    MAX_ALLOWED_SUB_QUESTIONS,
+    DEFAULT_RECURSION_DEPTH,
+    DEFAULT_SUB_QUESTIONS,
+    DEFAULT_RECURSION_THRESHOLD
 )
 
 def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Test the research generator with recursive question breakdown.')
     parser.add_argument('question', type=str, help='The research question to process')
-    parser.add_argument('--threshold', '-t', type=int, choices=[0, 1, 2], default=None, 
-                        help='Recursion threshold (0=normal, 1=conservative, 2=very conservative)')
+    parser.add_argument('--threshold', '-t', type=int, choices=[0, 1, 2], default=DEFAULT_RECURSION_THRESHOLD, 
+                        help=f'Recursion threshold (0=normal, 1=conservative, 2=very conservative). Default: {DEFAULT_RECURSION_THRESHOLD}')
+    parser.add_argument('--depth', '-d', type=int, default=DEFAULT_RECURSION_DEPTH, 
+                        help=f'Maximum recursion depth (0-{MAX_ALLOWED_RECURSION_DEPTH}). Default: {DEFAULT_RECURSION_DEPTH}')
+    parser.add_argument('--sub-questions', '-s', type=int, default=DEFAULT_SUB_QUESTIONS, 
+                        help=f'Maximum number of sub-questions (1-{MAX_ALLOWED_SUB_QUESTIONS}). Default: {DEFAULT_SUB_QUESTIONS}')
     args = parser.parse_args()
+    
+    # Validate parameters
+    max_recursion_depth = min(max(0, args.depth), MAX_ALLOWED_RECURSION_DEPTH)
+    max_sub_questions = min(max(1, args.sub_questions), MAX_ALLOWED_SUB_QUESTIONS)
+    recursion_threshold = args.threshold
     
     # Get the question from command line arguments
     main_question = args.question
     print(f"Processing research question: {main_question}")
-    
-    # Set recursion threshold if provided
-    if args.threshold is not None:
-        # We need to modify the module's global variable
-        import lambda_function
-        lambda_function.RECURSION_THRESHOLD = args.threshold
-        print(f"Set recursion threshold to: {args.threshold}")
-    else:
-        print(f"Using default recursion threshold: {RECURSION_THRESHOLD}")
+    print(f"Parameters: max_recursion_depth={max_recursion_depth}, max_sub_questions={max_sub_questions}, recursion_threshold={recursion_threshold}")
     
     # Set environment variables (you'll need to set your API key)
     if 'ANTHROPIC_API_KEY' not in os.environ:
@@ -71,8 +75,14 @@ def main():
             'children': []
         }
         
-        # Process the question tree recursively
-        process_question_node(question_tree, client)
+        # Process the question tree recursively with user-specified parameters
+        process_question_node(
+            question_tree, 
+            client, 
+            max_recursion_depth=max_recursion_depth,
+            max_sub_questions=max_sub_questions,
+            recursion_threshold=recursion_threshold
+        )
         
         # Print the question tree structure
         print("\n--- Question Tree Structure ---")
@@ -113,7 +123,11 @@ def main():
             'explanation': final_answer,
             'tree_visualization': tree_visualization,
             'question_tree': question_tree,
-            'recursion_threshold': args.threshold if args.threshold is not None else RECURSION_THRESHOLD
+            'parameters_used': {
+                'max_recursion_depth': max_recursion_depth,
+                'max_sub_questions': max_sub_questions,
+                'recursion_threshold': recursion_threshold
+            }
         }
         with open(f"{output_dir}/complete_output.json", "w") as f:
             json.dump(complete_output, f, indent=2)

@@ -4,13 +4,13 @@ import os
 import uuid
 from anthropic import Anthropic
 
-# Maximum recursion depth for question breakdown
-MAX_RECURSION_DEPTH = 2
-# Maximum number of sub-questions at each level
-MAX_SUB_QUESTIONS = 3
-# Recursion threshold - higher values make the system more conservative about breaking down questions
-# 0 = normal, 1 = conservative, 2 = very conservative
-RECURSION_THRESHOLD = 1
+# Maximum allowed values for user-configurable parameters
+MAX_ALLOWED_RECURSION_DEPTH = 4
+MAX_ALLOWED_SUB_QUESTIONS = 5
+# Default values
+DEFAULT_RECURSION_DEPTH = 2
+DEFAULT_SUB_QUESTIONS = 3
+DEFAULT_RECURSION_THRESHOLD = 1
 
 def lambda_handler(event, context):
     # CORS headers to include in all responses
@@ -61,7 +61,28 @@ def lambda_handler(event, context):
                     'error': 'Missing required parameter. Please provide a research topic.'
                 })
 
+            # Get user-specified parameters with validation
+            max_recursion_depth = min(
+                int(body.get('max_recursion_depth', DEFAULT_RECURSION_DEPTH)), 
+                MAX_ALLOWED_RECURSION_DEPTH
+            )
+            max_sub_questions = min(
+                int(body.get('max_sub_questions', DEFAULT_SUB_QUESTIONS)), 
+                MAX_ALLOWED_SUB_QUESTIONS
+            )
+            recursion_threshold = min(
+                int(body.get('recursion_threshold', DEFAULT_RECURSION_THRESHOLD)), 
+                2  # Maximum threshold value is 2
+            )
+            
+            # Ensure values are within valid ranges
+            max_recursion_depth = max(0, max_recursion_depth)
+            max_sub_questions = max(1, max_sub_questions)
+            recursion_threshold = max(0, recursion_threshold)
+            
             print(f"Processing main question: {main_question}")
+            print(f"Using parameters - max_recursion_depth: {max_recursion_depth}, " +
+                  f"max_sub_questions: {max_sub_questions}, recursion_threshold: {recursion_threshold}")
             
             # Start the recursive question breakdown and answering process
             question_tree = {
@@ -71,8 +92,14 @@ def lambda_handler(event, context):
                 'children': []
             }
             
-            # Process the question tree recursively
-            process_question_node(question_tree, client)
+            # Process the question tree recursively with user-specified parameters
+            process_question_node(
+                question_tree, 
+                client, 
+                max_recursion_depth=max_recursion_depth,
+                max_sub_questions=max_sub_questions,
+                recursion_threshold=recursion_threshold
+            )
             
             # Generate the final aggregated answer
             final_answer = aggregate_answers(question_tree, client)
@@ -80,16 +107,24 @@ def lambda_handler(event, context):
             # Generate a visualization of the thought tree
             tree_visualization = generate_tree_visualization(question_tree)
             
+            # Include the parameters used in the response
             return build_response(200, {
                 'explanation': final_answer,
                 'tree_visualization': tree_visualization,
                 'question_tree': question_tree,
+                'parameters_used': {
+                    'max_recursion_depth': max_recursion_depth,
+                    'max_sub_questions': max_sub_questions,
+                    'recursion_threshold': recursion_threshold
+                },
                 'success': True,
                 'formatted': True
             })
             
         except json.JSONDecodeError:
             return build_response(400, {'error': 'Invalid JSON in request body'})
+        except ValueError as ve:
+            return build_response(400, {'error': f'Invalid parameter value: {str(ve)}'})
         
     except Exception as e:
         print(f"Error: {str(e)}")
@@ -98,7 +133,8 @@ def lambda_handler(event, context):
         traceback.print_exc()
         return build_response(500, {'error': f'Internal server error: {str(e)}'})
 
-def process_question_node(node, client):
+def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DEPTH, 
+                         max_sub_questions=DEFAULT_SUB_QUESTIONS, recursion_threshold=DEFAULT_RECURSION_THRESHOLD):
     """
     Recursively process a question node:
     1. Determine if the question needs to be broken down
@@ -111,8 +147,8 @@ def process_question_node(node, client):
     print(f"Processing question at depth {depth}: {question}")
     
     # Check if we've reached the maximum recursion depth
-    if depth >= MAX_RECURSION_DEPTH:
-        print(f"WARNING: Maximum recursion depth ({MAX_RECURSION_DEPTH}) reached for question: {question}")
+    if depth >= max_recursion_depth:
+        print(f"WARNING: Maximum recursion depth ({max_recursion_depth}) reached for question: {question}")
         
         # Instead of error message, get a concise summary
         node['answer'] = get_concise_summary_for_broad_question(question, client)
@@ -126,7 +162,7 @@ def process_question_node(node, client):
         print(f"At depth {depth}, being more conservative about breaking down: {question}")
     
     # Determine if the question needs to be broken down
-    needs_breakdown, sub_questions = should_break_down_question(question, client)
+    needs_breakdown, sub_questions = should_break_down_question(question, client, recursion_threshold)
     
     # Additional check: if we're at depth > 0 and have no sub-questions or only one, don't break down
     if needs_breakdown and depth > 0 and (not sub_questions or len(sub_questions) <= 1):
@@ -146,27 +182,33 @@ def process_question_node(node, client):
                 'children': []
             }
             node['children'].append(sub_node)
-            process_question_node(sub_node, client)
+            process_question_node(sub_node, client, max_recursion_depth, max_sub_questions, recursion_threshold)
     else:
-        # This is a leaf node, get the answer
-        print(f"Getting answer for leaf question: {question}")
-        node['answer'] = get_answer_for_question(question, client)
+        # This is a leaf node, check if it's too vague
+        if is_question_too_vague(question, client):
+            print(f"Question is too vague, providing vanilla response: {question}")
+            node['answer'] = get_vanilla_response_for_vague_question(question, client)
+            node['is_vague'] = True
+        else:
+            # Get a detailed answer for a specific question
+            print(f"Getting answer for leaf question: {question}")
+            node['answer'] = get_answer_for_question(question, client)
 
-def should_break_down_question(question, client):
+def should_break_down_question(question, client, recursion_threshold=DEFAULT_RECURSION_THRESHOLD):
     """
     Use Anthropic to determine if a question should be broken down into sub-questions.
     Returns a tuple of (needs_breakdown, sub_questions)
     """
     # Adjust the prompt based on the recursion threshold
     conservative_guidance = ""
-    if RECURSION_THRESHOLD >= 1:
+    if recursion_threshold >= 1:
         conservative_guidance = """
 IMPORTANT: Be conservative about breaking down questions. Only break down a question if ALL of these criteria are met:
 1. The question covers multiple distinct topics or aspects that would benefit from separate analysis
 2. The question is broad enough that a direct answer would be superficial
 3. Breaking it down would lead to more precise and valuable answers
 """
-    if RECURSION_THRESHOLD >= 2:
+    if recursion_threshold >= 2:
         conservative_guidance += """
 EXTREMELY IMPORTANT: Be VERY conservative about breaking down questions. The strong preference is to NOT break down questions unless absolutely necessary.
 Only break down questions that are extremely broad and complex, covering multiple distinct domains of knowledge.
@@ -192,13 +234,13 @@ If needs_breakdown is false, sub_questions can be an empty array.
 
     # Adjust temperature based on recursion threshold - lower temperature for more conservative behavior
     temperature = 0.2
-    if RECURSION_THRESHOLD >= 1:
+    if recursion_threshold >= 1:
         temperature = 0.1
     
     system_message = "You are a helpful research assistant that breaks down complex questions into simpler sub-questions."
-    if RECURSION_THRESHOLD >= 1:
+    if recursion_threshold >= 1:
         system_message += " Be conservative about breaking down questions - only do so when truly necessary."
-    if RECURSION_THRESHOLD >= 2:
+    if recursion_threshold >= 2:
         system_message += " The strong preference is to NOT break down questions unless absolutely necessary."
     system_message += " Always respond in valid JSON format."
 
@@ -229,7 +271,7 @@ If needs_breakdown is false, sub_questions can be an empty array.
             
             # Apply additional threshold-based filtering
             needs_breakdown = result.get('needs_breakdown', False)
-            if needs_breakdown and RECURSION_THRESHOLD >= 2:
+            if needs_breakdown and recursion_threshold >= 2:
                 # For very conservative mode, randomly reject some breakdown decisions
                 import random
                 if random.random() < 0.5:  # 50% chance to override to false
@@ -239,8 +281,8 @@ If needs_breakdown is false, sub_questions can be an empty array.
             # Ensure we don't exceed the maximum number of sub-questions
             if needs_breakdown:
                 sub_questions = result.get('sub_questions', [])
-                if len(sub_questions) > MAX_SUB_QUESTIONS:
-                    sub_questions = sub_questions[:MAX_SUB_QUESTIONS]
+                if len(sub_questions) > max_sub_questions:
+                    sub_questions = sub_questions[:max_sub_questions]
                 return needs_breakdown, sub_questions
             return False, []
         else:
@@ -285,14 +327,23 @@ def aggregate_answers(question_tree, client):
     # Create a structured representation of the question tree for Claude
     tree_representation = format_tree_for_aggregation(question_tree)
     
-    # Check if any nodes reached max depth
+    # Check if any nodes reached max depth or were too vague
     max_depth_reached = has_max_depth_nodes(question_tree)
-    max_depth_note = ""
+    has_vague_questions = has_vague_question_nodes(question_tree)
+    
+    special_notes = ""
     if max_depth_reached:
-        max_depth_note = """
+        special_notes += """
 Note: Some questions in this research were very broad and reached our system's maximum depth for breaking down questions.
 For these broad questions, I've provided concise overviews rather than comprehensive answers.
 You may want to ask more specific follow-up questions about these areas for more detailed information.
+"""
+    
+    if has_vague_questions:
+        special_notes += """
+Note: Some questions in this research were identified as too vague to provide detailed, specific answers.
+For these vague questions, I've provided general guidance and suggestions for making them more specific.
+Consider refining these questions with more context or parameters for more detailed information.
 """
     
     prompt = f"""You are a research assistant tasked with synthesizing information from multiple sources.
@@ -301,7 +352,7 @@ I've broken down a complex question into sub-questions and found answers to each
 
 Original question: {question_tree['question']}
 
-{max_depth_note}
+{special_notes}
 
 Here is the breakdown of questions and answers:
 
@@ -322,14 +373,24 @@ Please synthesize all this information into a comprehensive, well-structured ans
     
     content = extract_content(message)
     
-    # Add a disclaimer at the beginning if max depth was reached
+    # Add disclaimers at the beginning if needed
+    disclaimers = ""
     if max_depth_reached:
-        disclaimer = """<div class="note" style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px;">
+        disclaimers += """<div class="note" style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px;">
         <strong>Note:</strong> Some questions in this research were very broad and reached our system's maximum depth for breaking down questions.
         For these broad areas, concise overviews are provided rather than comprehensive answers.
         Consider asking more specific follow-up questions about these areas for more detailed information.
         </div>"""
-        return disclaimer + content
+    
+    if has_vague_questions:
+        disclaimers += """<div class="note" style="background-color: #e6f7ff; border-left: 4px solid #1890ff; padding: 15px; margin-bottom: 20px;">
+        <strong>Note:</strong> Some questions in this research were identified as too vague to provide detailed, specific answers.
+        For these questions, general guidance and suggestions for making them more specific are provided.
+        Consider refining these questions with more context or parameters for more detailed information.
+        </div>"""
+    
+    if disclaimers:
+        return disclaimers + content
     
     return content
 
@@ -393,6 +454,10 @@ def generate_tree_visualization(question_tree):
                 background-color: #fff7e6;
                 border-left: 4px solid #fa8c16;
             }
+            .vague-node {
+                background-color: #f9f0ff;
+                border-left: 4px solid #722ed1;
+            }
             .answer-node {
                 background-color: #f6ffed;
                 border-left: 4px solid #52c41a;
@@ -437,6 +502,15 @@ def generate_tree_visualization(question_tree):
             .max-depth-badge {
                 display: inline-block;
                 background-color: #fa8c16;
+                color: white;
+                font-size: 0.8em;
+                padding: 2px 8px;
+                border-radius: 10px;
+                margin-left: 10px;
+            }
+            .vague-badge {
+                display: inline-block;
+                background-color: #722ed1;
                 color: white;
                 font-size: 0.8em;
                 padding: 2px 8px;
@@ -637,11 +711,12 @@ def render_interactive_node_html(node):
     depth = node['depth']
     node_id = node['id']
     
-    # Add a special class if this node reached max depth
+    # Add a special class if this node reached max depth or is vague
     max_depth_class = " max-depth-node" if node.get('max_depth_reached', False) else ""
+    vague_class = " vague-node" if node.get('is_vague', False) else ""
     
     html = f"""
-    <div class="node question-node{max_depth_class}" id="{node_id}">
+    <div class="node question-node{max_depth_class}{vague_class}" id="{node_id}">
         <div class="node-header" onclick="toggleNode('{node_id}')">
             <span class="depth-indicator">Depth {depth}:</span>
             <span class="node-title">Question: {node['question']}</span>
@@ -650,6 +725,7 @@ def render_interactive_node_html(node):
         <div class="node-content">
             <button onclick="showDetails('{node_id}', true); event.stopPropagation();">View Details</button>
             {f'<span class="max-depth-badge">Max Depth</span>' if node.get('max_depth_reached', False) else ''}
+            {f'<span class="vague-badge">Vague Question</span>' if node.get('is_vague', False) else ''}
         </div>
     """
     
@@ -759,6 +835,117 @@ def has_max_depth_nodes(node):
         # Check children
         for child in node['children']:
             if has_max_depth_nodes(child):
+                return True
+    
+    return False
+
+def is_question_too_vague(question, client):
+    """
+    Determine if a question is too vague to provide a detailed answer.
+    Returns True if the question is too vague, False otherwise.
+    """
+    prompt = f"""You are a research assistant tasked with evaluating questions.
+
+Given the following question, determine if it is too vague to provide a detailed, specific answer:
+
+Question: {question}
+
+A question is too vague if:
+1. It lacks specific context or parameters
+2. It could be interpreted in many different ways
+3. It's overly broad without clear focus
+4. It uses ambiguous terms without clarification
+
+Your response should be in JSON format:
+{{
+  "is_vague": true/false,
+  "reasoning": "Brief explanation of why this question is or is not too vague"
+}}
+"""
+
+    message = client.messages.create(
+        model="claude-3-haiku-20240307",
+        max_tokens=500,
+        temperature=0.2,
+        system="You are a helpful research assistant that evaluates the specificity of questions. Always respond in valid JSON format.",
+        messages=[
+            {"role": "user", "content": prompt}
+        ]
+    )
+    
+    # Extract the JSON response
+    content = extract_content(message)
+    
+    try:
+        # Find JSON in the response
+        json_start = content.find('{')
+        json_end = content.rfind('}') + 1
+        if json_start >= 0 and json_end > json_start:
+            json_str = content[json_start:json_end]
+            result = json.loads(json_str)
+            
+            # Log the reasoning for debugging
+            if 'reasoning' in result:
+                print(f"Vagueness evaluation reasoning: {result['reasoning']}")
+            
+            return result.get('is_vague', False)
+        else:
+            print(f"Could not find JSON in response: {content}")
+            return False
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON response: {e}")
+        print(f"Response content: {content}")
+        return False
+
+def get_vanilla_response_for_vague_question(question, client):
+    """
+    Provide a vanilla response for questions that are too vague.
+    """
+    prompt = f"""You are a research assistant.
+    
+    The following question is too vague to provide a detailed, specific answer:
+    
+    {question}
+    
+    Please provide a vanilla response that:
+    1. Acknowledges that the question is vague or lacks specificity
+    2. Explains why more specific details would be helpful
+    3. Suggests ways to make the question more specific
+    4. Provides some general information about the topic, but without going into great detail
+    
+    Format your response with HTML tags for better readability.
+    """
+    
+    message = client.messages.create(
+        model="claude-3-haiku-20240307",
+        max_tokens=800,
+        temperature=0.5,
+        system="You are a helpful research assistant that provides guidance on vague questions. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <div class='note'> for special notes, <strong> for emphasis.",
+        messages=[
+            {"role": "user", "content": prompt}
+        ]
+    )
+    
+    content = extract_content(message)
+    
+    # Add a disclaimer at the beginning
+    disclaimer = """<div class="note" style="background-color: #e6f7ff; border-left: 4px solid #1890ff; padding: 15px; margin-bottom: 20px;">
+    <strong>Note:</strong> This question is quite vague or general. For more detailed information, consider asking a more specific question.
+    </div>"""
+    
+    return disclaimer + content
+
+def has_vague_question_nodes(node):
+    """
+    Check if the tree has any nodes that were identified as too vague
+    """
+    if node.get('is_vague', False):
+        return True
+    
+    if node.get('needs_breakdown', False):
+        # Check children
+        for child in node['children']:
+            if has_vague_question_nodes(child):
                 return True
     
     return False

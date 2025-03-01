@@ -5,20 +5,30 @@ This allows you to test the function via its API Gateway endpoint.
 
 Usage:
     python test_deployed.py "climate change impacts on agriculture" https://your-api-endpoint.execute-api.region.amazonaws.com/prod/
+    python test_deployed.py --depth 3 --sub-questions 4 --threshold 1 "climate change impacts on agriculture" https://your-api-endpoint.execute-api.region.amazonaws.com/prod/
 """
 
 import sys
 import json
 import requests
+import argparse
 
 def main():
-    if len(sys.argv) < 3:
-        print("Usage: python test_deployed.py \"your research topic\" https://your-api-endpoint.execute-api.region.amazonaws.com/prod/")
-        sys.exit(1)
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Test the deployed research generator Lambda function.')
+    parser.add_argument('topic', type=str, help='The research topic to process')
+    parser.add_argument('endpoint', type=str, help='The API Gateway endpoint URL')
+    parser.add_argument('--threshold', '-t', type=int, choices=[0, 1, 2], default=None, 
+                        help='Recursion threshold (0=normal, 1=conservative, 2=very conservative)')
+    parser.add_argument('--depth', '-d', type=int, default=None, 
+                        help='Maximum recursion depth (0-4)')
+    parser.add_argument('--sub-questions', '-s', type=int, default=None, 
+                        help='Maximum number of sub-questions (1-5)')
+    args = parser.parse_args()
     
     # Get the topic and API endpoint from command line arguments
-    topic = sys.argv[1]
-    api_endpoint = sys.argv[2].rstrip('/')
+    topic = args.topic
+    api_endpoint = args.endpoint.rstrip('/')
     
     # Ensure the endpoint ends with /research
     if not api_endpoint.endswith('/research'):
@@ -31,6 +41,19 @@ def main():
     payload = {
         'expression': topic
     }
+    
+    # Add optional parameters if provided
+    if args.threshold is not None:
+        payload['recursion_threshold'] = args.threshold
+        print(f"Setting recursion threshold: {args.threshold}")
+    
+    if args.depth is not None:
+        payload['max_recursion_depth'] = args.depth
+        print(f"Setting max recursion depth: {args.depth}")
+    
+    if args.sub_questions is not None:
+        payload['max_sub_questions'] = args.sub_questions
+        print(f"Setting max sub questions: {args.sub_questions}")
     
     # Create a session with proxies disabled
     session = requests.Session()
