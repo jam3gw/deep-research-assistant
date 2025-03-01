@@ -5,12 +5,11 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
-import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as path from 'path';
+import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 
 export interface ResearchStackProps extends cdk.StackProps {
     environmentName: string;
-    secretsStackName?: string; // Optional: Name of the secrets stack to reference
 }
 
 export class ResearchStack extends cdk.Stack {
@@ -18,40 +17,50 @@ export class ResearchStack extends cdk.Stack {
         super(scope, id, props);
 
         // Get the Anthropic API key secret from SSM Parameter Store
-        const secretArnParam = ssm.StringParameter.fromStringParameterAttributes(this, 'AnthropicApiKeySecretArnParam', {
+        const anthropicApiParam = new ssm.StringParameter(this, 'AnthropicApiParameter', {
             parameterName: `/personal-assistant/${props.environmentName}/anthropic-api-key-secret-arn`,
-        });
-
-        // Import the secret using the ARN from SSM
-        const anthropicApiKey = secretsmanager.Secret.fromSecretAttributes(this, 'AnthropicApiKey', {
-            secretCompleteArn: secretArnParam.stringValue,
+            stringValue: process.env.ANTHROPIC_API_KEY ?? (() => { throw new Error('ANTHROPIC_API_KEY not set in environment') })(),
+            description: 'API Key for Anthropic Claude API',
+            tier: ssm.ParameterTier.STANDARD,
         });
 
         // Create a Lambda function for the research generator
-        const researchGenerator = new lambda.Function(this, 'ResearchGenerator', {
-            runtime: lambda.Runtime.PYTHON_3_9,
-            handler: 'lambda_function.lambda_handler',
-            code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/research-generator')),
+        const researchGenerator = new PythonFunction(this, 'ResearchGenerator', {
+            entry: path.join(__dirname, '../../lambda/research-generator'),
+            index: 'lambda_function.py',
+            handler: 'lambda_handler',
             timeout: cdk.Duration.minutes(5),
+            runtime: lambda.Runtime.PYTHON_3_9,
             memorySize: 512,
             environment: {
-                ANTHROPIC_API_KEY_SECRET_NAME: anthropicApiKey.secretName,
+                ANTHROPIC_API_KEY_SECRET_NAME: anthropicApiParam.parameterName,
                 ENVIRONMENT: props.environmentName,
             },
             logRetention: logs.RetentionDays.ONE_WEEK,
+            bundling: {
+                assetExcludes: [
+                    'venv',
+                    '__pycache__',
+                    'research_output.json',
+                    'test_locally.py',
+                    'test_setup.py',
+                    'test_deployed.py',
+                    'setup_local_env.sh'
+                ]
+            }
         });
 
         // Grant the Lambda function permission to read the Anthropic API key
-        anthropicApiKey.grantRead(researchGenerator);
+        researchGenerator.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: ['ssm:GetParameter'],
+            resources: [anthropicApiParam.parameterArn],
+        }));
 
         // Create an API Gateway REST API
         const api = new apigateway.RestApi(this, 'ResearchAPI', {
             restApiName: `research-generator-api-${props.environmentName}`,
             description: 'API for generating research questions and outlines',
-            defaultCorsPreflightOptions: {
-                allowOrigins: apigateway.Cors.ALL_ORIGINS,
-                allowMethods: apigateway.Cors.ALL_METHODS,
-            },
         });
 
         // Create a resource and method for the API

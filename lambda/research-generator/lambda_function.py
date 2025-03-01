@@ -1,198 +1,133 @@
 import json
-import os
 import boto3
-import logging
-import anthropic
-from typing import Dict, List, Any, Optional
-
-# Configure logging
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-# Initialize AWS clients
-secretsmanager = boto3.client('secretsmanager')
-
-def get_anthropic_api_key() -> str:
-    """Retrieve the Anthropic API key from AWS Secrets Manager."""
-    try:
-        secret_name = os.environ.get('ANTHROPIC_API_KEY_SECRET_NAME')
-        if not secret_name:
-            raise ValueError("ANTHROPIC_API_KEY_SECRET_NAME environment variable is not set")
-        
-        response = secretsmanager.get_secret_value(SecretId=secret_name)
-        secret = json.loads(response['SecretString'])
-        return secret['anthropicApiKey']
-    except Exception as e:
-        logger.error(f"Error retrieving Anthropic API key: {str(e)}")
-        raise
-
-def generate_research_structure(topic: str) -> Dict[str, Any]:
-    """
-    Generate research questions and outline for a given topic using Anthropic API.
-    
-    Args:
-        topic: The research topic to analyze
-        
-    Returns:
-        A dictionary containing subtopics, research questions, and confidence scores
-    """
-    try:
-        # Get Anthropic API key
-        api_key = get_anthropic_api_key()
-        
-        # Initialize Anthropic client
-        client = anthropic.Anthropic(api_key=api_key)
-        
-        # Create the prompt for Claude
-        prompt = f"""
-        I need to create a structured research plan for the topic: "{topic}".
-        
-        Please analyze this topic and:
-        1. Break it down into 3-5 key subtopics that provide comprehensive coverage
-        2. For each subtopic, generate 2-3 specific research questions
-        3. Assign a confidence score (0.0-1.0) to each question based on how relevant and well-defined it is
-        
-        Format your response as a JSON object with this structure:
-        {{
-            "topic": "the original topic",
-            "subtopics": [
-                {{
-                    "name": "subtopic name",
-                    "description": "brief description of this subtopic",
-                    "questions": [
-                        {{
-                            "question": "specific research question",
-                            "confidence": 0.95,
-                            "rationale": "brief explanation of why this question is important"
-                        }}
-                    ]
-                }}
-            ]
-        }}
-        
-        Only return the JSON object, nothing else.
-        """
-        
-        # Call Anthropic API
-        response = client.messages.create(
-            model="claude-3-sonnet-20240229",
-            max_tokens=2000,
-            temperature=0.2,
-            system="You are a research planning assistant that helps break down topics into structured research questions. Always return valid JSON.",
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-        
-        # Extract and parse the JSON response
-        content = response.content[0].text
-        # Remove any markdown code block indicators if present
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0].strip()
-            
-        result = json.loads(content)
-        
-        # Add metadata
-        result["metadata"] = {
-            "model": "claude-3-sonnet-20240229",
-            "generated_at": response.id,
-            "token_count": response.usage.input_tokens + response.usage.output_tokens
-        }
-        
-        return result
-        
-    except json.JSONDecodeError as e:
-        logger.error(f"Error parsing JSON response: {str(e)}")
-        logger.error(f"Raw response: {content}")
-        raise ValueError("Failed to parse response from Anthropic API")
-    except Exception as e:
-        logger.error(f"Error generating research structure: {str(e)}")
-        raise
-
-def validate_topic(topic: str) -> Optional[str]:
-    """
-    Validate the input topic and return an error message if invalid.
-    
-    Args:
-        topic: The topic to validate
-        
-    Returns:
-        Error message if invalid, None if valid
-    """
-    if not topic:
-        return "Topic cannot be empty"
-    
-    if len(topic) < 5:
-        return "Topic is too short. Please provide a more descriptive topic."
-    
-    if len(topic) > 200:
-        return "Topic is too long. Please provide a more concise topic."
-    
-    return None
+import os
+from anthropic import Anthropic
 
 def lambda_handler(event, context):
-    """
-    AWS Lambda handler function.
+    # CORS headers to include in all responses
+    cors_headers = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'OPTIONS,POST',
+        'Access-Control-Allow-Headers': 'Content-Type'
+    }
     
-    Args:
-        event: The event dict from AWS Lambda
-        context: The context object from AWS Lambda
-        
-    Returns:
-        API Gateway response with research structure or error
-    """
+    # Handle preflight OPTIONS request
+    if event.get('httpMethod') == 'OPTIONS':
+        return build_response(200, {})
+    
+    # Get the parameter name from environment variables
+    parameter_name = os.environ['ANTHROPIC_API_KEY_SECRET_NAME']
+    
+    session = boto3.session.Session()
+    ssm_client = session.client('ssm')
+    
     try:
-        logger.info(f"Received event: {json.dumps(event)}")
+        print(f"Attempting to get parameter: {parameter_name}")
+        response = ssm_client.get_parameter(
+            Name=parameter_name,
+            WithDecryption=True
+        )
         
-        # Extract topic from event
-        if 'body' in event:
-            # Handle API Gateway request
-            body = json.loads(event['body']) if isinstance(event['body'], str) else event['body']
-            topic = body.get('topic', '')
-        else:
-            # Handle direct Lambda invocation
-            topic = event.get('topic', '')
+        api_key = response['Parameter']['Value']
         
-        # Validate topic
-        error = validate_topic(topic)
-        if error:
-            return {
-                'statusCode': 400,
-                'headers': {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*'
-                },
-                'body': json.dumps({
-                    'error': error
+        # Log key details safely for debugging
+        key_length = len(api_key) if api_key else 0
+        key_prefix = api_key[:4] if key_length >= 4 else api_key
+        key_suffix = api_key[-4:] if key_length >= 8 else ""
+        print(f"API Key retrieved - Length: {key_length}, Prefix: {key_prefix}, Suffix: {key_suffix}")
+        print(f"API Key format check - Starts with 'sk-ant-': {api_key.startswith('sk-ant-') if api_key else False}")
+        
+        # Initialize Anthropic client
+        client = Anthropic(api_key=api_key)
+        print("Successfully initialized Anthropic client")
+
+        # Parse the incoming event
+        try:
+            body = json.loads(event.get('body', '{}'))
+            expression = body.get('expression')
+            
+            if not expression:
+                return build_response(400, {
+                    'error': 'Missing required parameter. Please provide a research topic.'
                 })
-            }
-        
-        # Generate research structure
-        result = generate_research_structure(topic)
-        
-        # Return successful response
-        return {
-            'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
-            'body': json.dumps(result)
-        }
+
+            # Create the message for Claude
+            prompt = f"""You are a research assistant.
+            
+            A student has asked you to research this prompt: {expression}
+            """
+            
+            # Get response from Claude using the Messages API
+            print(f"Sending request to Anthropic API with key prefix: {key_prefix}...")
+            message = client.messages.create(
+                model="claude-3-haiku-20240307",
+                max_tokens=1000,
+                temperature=0.5,
+                system="You are a helpful and friendly research assistant that explains complex concepts in simple terms. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <ol> and <li> for numbered steps, <strong> for emphasis, and <hr> for section dividers.",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+
+            # Extract the response text
+            print(f"Response received from Anthropic API.")
+            
+            # Extract text based on the response structure
+            explanation = ""
+            if hasattr(message, 'content'):
+                content = message.content
+                if isinstance(content, list):
+                    # If content is a list of blocks
+                    print(f"Content is a list with {len(content)} items")
+                    text_parts = []
+                    for item in content:
+                        print(f"Item type: {type(item)}")
+                        if hasattr(item, 'text'):
+                            text_parts.append(item.text)
+                        elif hasattr(item, 'value'):
+                            text_parts.append(item.value)
+                        elif isinstance(item, str):
+                            text_parts.append(item)
+                        else:
+                            print(f"Unknown item format: {item}")
+                    explanation = " ".join(text_parts)
+                elif isinstance(content, str):
+                    # If content is already a string
+                    explanation = content
+                else:
+                    # Fallback: convert to string representation
+                    explanation = str(content)
+            else:
+                explanation = str(message)
+            
+            print(f"Extracted explanation: {explanation[:100]}...")  # Log first 100 chars
+
+            return build_response(200, {
+                'explanation': explanation,
+                'success': True,
+                'formatted': True  # Flag to indicate the response contains HTML formatting
+            })
+            
+        except json.JSONDecodeError:
+            return build_response(400, {'error': 'Invalid JSON in request body'})
         
     except Exception as e:
-        logger.error(f"Error processing request: {str(e)}")
-        
-        # Return error response
-        return {
-            'statusCode': 500,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
-            'body': json.dumps({
-                'error': f"Internal server error: {str(e)}"
-            })
-        } 
+        print(f"Error: {str(e)}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        traceback.print_exc()
+        return build_response(500, {'error': f'Internal server error: {str(e)}'})
+
+def build_response(status_code, body):
+    """Helper function to build CORS-compliant responses."""
+    return {
+        'statusCode': status_code,
+        'headers': {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        },
+        'body': json.dumps(body)
+    }

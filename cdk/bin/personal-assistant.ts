@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
 import { WebsiteStack } from '../lib/website-stack';
-import { SecretsStack } from '../lib/secrets-stack';
 import { ResearchStack } from '../lib/research-stack';
 import config from '../config/environments';
 
@@ -24,19 +23,8 @@ const createStacksForEnvironment = (envKey: string) => {
   }
 
   const baseStackId = `PersonalAssistant${envConfig.name.charAt(0).toUpperCase() + envConfig.name.slice(1)}`;
-  const secretsStackId = `${baseStackId}SecretsStack`;
   const websiteStackId = `${baseStackId}WebsiteStack`;
   const researchStackId = `${baseStackId}ResearchStack`;
-
-  // Create the secrets stack first
-  const secretsStack = new SecretsStack(app, secretsStackId, {
-    environmentName: envConfig.name,
-    env: {
-      account: account,
-      region: region
-    },
-    tags: envConfig.tags
-  });
 
   // Create the website stack
   new WebsiteStack(app, websiteStackId, {
@@ -53,18 +41,12 @@ const createStacksForEnvironment = (envKey: string) => {
   // Create the Research stack with a dependency on the secrets stack
   const researchStack = new ResearchStack(app, researchStackId, {
     environmentName: envConfig.name,
-    secretsStackName: secretsStackId, // Pass the secrets stack name for reference
     env: {
       account: account,
       region: region
     },
     tags: envConfig.tags
   });
-
-  // Add explicit dependency on the secrets stack
-  researchStack.addDependency(secretsStack);
-
-  console.log(`Created stacks: ${secretsStackId}, ${websiteStackId}, ${researchStackId}`);
 };
 
 // If a specific environment is specified, create stacks for that environment only
