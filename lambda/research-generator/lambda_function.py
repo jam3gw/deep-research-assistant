@@ -165,12 +165,21 @@ def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DE
         print(f"At depth {depth}, being more conservative about breaking down: {question}")
     
     # Determine if the question needs to be broken down
-    needs_breakdown, sub_questions = should_break_down_question(question, client, recursion_threshold, max_sub_questions)
+    needs_breakdown, sub_questions = should_break_down_question(question, client, recursion_threshold, max_sub_questions, depth)
     
     # Additional check: if we're at depth > 0 and have no sub-questions or only one, don't break down
     if needs_breakdown and depth > 0 and (not sub_questions or len(sub_questions) <= 1):
         print(f"Overriding breakdown decision at depth {depth} because only {len(sub_questions)} sub-questions were generated")
         needs_breakdown = False
+    
+    # Validate that sub-questions are actually simpler than the parent question
+    if needs_breakdown and depth > 0 and sub_questions:
+        validated_sub_questions = validate_sub_questions_simplicity(question, sub_questions, client, depth)
+        if not validated_sub_questions:
+            print(f"Overriding breakdown decision at depth {depth} because sub-questions were not simpler than parent")
+            needs_breakdown = False
+        else:
+            sub_questions = validated_sub_questions
     
     node['needs_breakdown'] = needs_breakdown
     
@@ -197,13 +206,105 @@ def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DE
             print(f"Getting answer for leaf question: {question}")
             node['answer'] = get_answer_for_question(question, client)
 
-def should_break_down_question(question, client, recursion_threshold=DEFAULT_RECURSION_THRESHOLD, max_sub_questions=DEFAULT_SUB_QUESTIONS):
+def validate_sub_questions_simplicity(parent_question, sub_questions, client, depth):
+    """
+    Validate that sub-questions are actually simpler than the parent question.
+    Returns a filtered list of sub-questions that are simpler, or an empty list if none are simpler.
+    """
+    if depth == 0 or not sub_questions:
+        return sub_questions  # At depth 0, no simplification check needed
+    
+    prompt = f"""You are a research assistant tasked with evaluating whether sub-questions are simpler than their parent question.
+
+Parent question: {parent_question}
+
+Sub-questions:
+{json.dumps(sub_questions, indent=2)}
+
+For each sub-question, determine if it is GENUINELY SIMPLER than the parent question. A simpler question:
+1. Is more specific and narrower in scope
+2. Focuses on a single, well-defined aspect of the parent question
+3. Is answerable with less complexity
+4. Does not introduce new complexity or broaden the scope
+
+Your response should be in JSON format:
+{{
+  "evaluations": [
+    {{
+      "sub_question": "sub-question 1",
+      "is_simpler": true/false,
+      "reasoning": "Brief explanation"
+    }},
+    ...
+  ]
+}}
+"""
+
+    message = client.messages.create(
+        model="claude-3-haiku-20240307",
+        max_tokens=1000,
+        temperature=0.1,  # Low temperature for consistent evaluation
+        system="You are a helpful research assistant that evaluates the simplicity of questions. Always respond in valid JSON format.",
+        messages=[
+            {"role": "user", "content": prompt}
+        ]
+    )
+    
+    # Extract the JSON response
+    content = extract_content(message)
+    
+    try:
+        # Find JSON in the response
+        json_start = content.find('{')
+        json_end = content.rfind('}') + 1
+        if json_start >= 0 and json_end > json_start:
+            json_str = content[json_start:json_end]
+            result = json.loads(json_str)
+            
+            # Filter sub-questions to only include those that are simpler
+            simpler_sub_questions = []
+            for eval_item in result.get('evaluations', []):
+                if eval_item.get('is_simpler', False):
+                    simpler_sub_questions.append(eval_item.get('sub_question'))
+                else:
+                    print(f"Removing complex sub-question: {eval_item.get('sub_question')}")
+                    print(f"Reasoning: {eval_item.get('reasoning')}")
+            
+            return simpler_sub_questions
+        else:
+            print(f"Could not find JSON in response: {content}")
+            return []
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON response: {e}")
+        print(f"Response content: {content}")
+        return []
+
+def should_break_down_question(question, client, recursion_threshold=DEFAULT_RECURSION_THRESHOLD, max_sub_questions=DEFAULT_SUB_QUESTIONS, depth=0):
     """
     Use Anthropic to determine if a question should be broken down into sub-questions.
     Returns a tuple of (needs_breakdown, sub_questions)
     """
-    # Adjust the prompt based on the recursion threshold
+    # Adjust the prompt based on the recursion threshold and depth
     conservative_guidance = ""
+    simplification_guidance = ""
+    
+    # Add depth-based guidance to ensure questions get simpler
+    if depth > 0:
+        simplification_guidance = f"""
+CRITICAL: You are at recursion depth {depth}. At this depth, it is ESSENTIAL that any sub-questions you generate are SIGNIFICANTLY SIMPLER than the parent question.
+Each sub-question MUST:
+1. Be more specific and narrower in scope than the parent question
+2. Focus on a single, well-defined aspect of the parent question
+3. Be answerable with less complexity than the parent question
+4. Avoid introducing new complexity or broadening the scope
+
+DO NOT create sub-questions that:
+- Are as complex as the original question
+- Introduce new topics not directly related to the parent question
+- Require their own complex breakdown
+- Are vague or general in nature
+"""
+
     if recursion_threshold >= 1:
         conservative_guidance = """
 IMPORTANT: Be conservative about breaking down questions. Only break down a question if ALL of these criteria are met:
@@ -221,6 +322,7 @@ Only break down questions that are extremely broad and complex, covering multipl
 
 Given the following question, determine if it should be broken down into sub-questions for more thorough research.
 {conservative_guidance}
+{simplification_guidance}
 If the question is already specific, focused on a single aspect, or can be answered comprehensively in one go, do NOT break it down.
 
 Question: {question}
@@ -235,9 +337,9 @@ Your response should be in JSON format:
 If needs_breakdown is false, sub_questions can be an empty array.
 """
 
-    # Adjust temperature based on recursion threshold - lower temperature for more conservative behavior
+    # Adjust temperature based on recursion threshold and depth - lower temperature for more conservative behavior
     temperature = 0.2
-    if recursion_threshold >= 1:
+    if recursion_threshold >= 1 or depth > 0:
         temperature = 0.1
     
     system_message = "You are a helpful research assistant that breaks down complex questions into simpler sub-questions."
@@ -245,6 +347,8 @@ If needs_breakdown is false, sub_questions can be an empty array.
         system_message += " Be conservative about breaking down questions - only do so when truly necessary."
     if recursion_threshold >= 2:
         system_message += " The strong preference is to NOT break down questions unless absolutely necessary."
+    if depth > 0:
+        system_message += f" At depth {depth}, you MUST ensure that sub-questions are SIGNIFICANTLY SIMPLER than their parent question."
     system_message += " Always respond in valid JSON format."
 
     message = client.messages.create(
