@@ -1,6 +1,6 @@
-# Research Question Generator Frontend
+# Deep Research Assistant Frontend
 
-This is the frontend for the Research Question Generator, a tool that uses AI to break down complex research questions into manageable sub-questions and provide comprehensive answers.
+This is the frontend for the Deep Research Assistant, a tool that uses AI to break down complex research questions into manageable sub-questions and provide comprehensive answers.
 
 ## Features
 

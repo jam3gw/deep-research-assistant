@@ -365,7 +365,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (hostname.includes('dev.')) {
         environmentTag.textContent = 'Development Environment';
         environmentTag.style.color = '#e67e22';
-        document.title = 'Research Question Generator (DEV)';
+        document.title = 'Deep Research Assitant (DEV)';
     } else {
         environmentTag.textContent = 'Production Environment';
         environmentTag.style.color = '#27ae60';
