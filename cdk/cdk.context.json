@@ -2,5 +2,12 @@
   "hosted-zone:account=746943317086:domainName=jake-moses.com:region=us-west-2": {
     "Id": "/hostedzone/Z0332095198CVU3FKE8YS",
     "Name": "jake-moses.com."
-  }
+  },
+  "acknowledged-issue-numbers": [
+    3277,
+    3277,
+    32776,
+    32775,
+    32775
+  ]
 }
