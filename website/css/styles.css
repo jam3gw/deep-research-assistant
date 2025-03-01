@@ -393,3 +393,123 @@ footer {
         max-width: none;
     }
 }
+
+/* Share functionality */
+.share-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    margin-bottom: 20px;
+}
+
+.share-button {
+    background-color: #4a6fa5;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.share-button:hover {
+    background-color: #3a5a8c;
+}
+
+.share-options {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-top: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 500px;
+}
+
+.share-link-container {
+    display: flex;
+    margin-bottom: 15px;
+}
+
+.share-link-container input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px 0 0 4px;
+    font-size: 0.9rem;
+}
+
+.share-link-container button {
+    background-color: #4a6fa5;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.social-share-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.social-share-button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.social-share-button.twitter {
+    background-color: #1DA1F2;
+}
+
+.social-share-button.facebook {
+    background-color: #4267B2;
+}
+
+.social-share-button.linkedin {
+    background-color: #0077B5;
+}
+
+.social-share-button:hover {
+    opacity: 0.9;
+}
+
+/* Toast notification for copy success */
+.toast-notification {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+}
+
+.toast-notification.active {
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .social-share-buttons {
+        flex-direction: column;
+    }
+}

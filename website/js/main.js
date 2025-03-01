@@ -18,6 +18,21 @@ document.addEventListener('DOMContentLoaded', function () {
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabPanes = document.querySelectorAll('.tab-pane');
 
+    // Share functionality elements
+    const shareButton = document.getElementById('share-button');
+    const shareOptions = document.getElementById('share-options');
+    const shareLink = document.getElementById('share-link');
+    const copyLinkButton = document.getElementById('copy-link-button');
+    const shareTwitter = document.getElementById('share-twitter');
+    const shareFacebook = document.getElementById('share-facebook');
+    const shareLinkedin = document.getElementById('share-linkedin');
+
+    // Current research data
+    let currentResearchData = null;
+
+    // Check for shared research in URL
+    checkForSharedResearch();
+
     // Update range input values
     recursionDepth.addEventListener('input', function () {
         recursionDepthValue.textContent = this.value;
@@ -54,6 +69,41 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // Share button functionality
+    shareButton.addEventListener('click', function () {
+        shareOptions.classList.toggle('hidden');
+
+        if (!shareOptions.classList.contains('hidden')) {
+            generateShareLink();
+        }
+    });
+
+    // Copy link button
+    copyLinkButton.addEventListener('click', function () {
+        shareLink.select();
+        document.execCommand('copy');
+
+        showToast('Link copied to clipboard!');
+    });
+
+    // Social share buttons
+    shareTwitter.addEventListener('click', function () {
+        const text = `Check out my research on: "${currentResearchData.question}"`;
+        const url = shareLink.value;
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+    });
+
+    shareFacebook.addEventListener('click', function () {
+        const url = shareLink.value;
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+    });
+
+    shareLinkedin.addEventListener('click', function () {
+        const title = `Research on: ${currentResearchData.question}`;
+        const url = shareLink.value;
+        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`, '_blank');
+    });
+
     // Form submission
     questionForm.addEventListener('submit', function (e) {
         e.preventDefault();
@@ -81,6 +131,17 @@ document.addEventListener('DOMContentLoaded', function () {
         // Invoke Lambda directly via Function URL
         invokeLambda(requestData)
             .then(data => {
+                // Store current research data for sharing
+                currentResearchData = {
+                    question: requestData.expression,
+                    parameters: {
+                        max_recursion_depth: requestData.max_recursion_depth,
+                        max_sub_questions: requestData.max_sub_questions,
+                        recursion_threshold: requestData.recursion_threshold
+                    },
+                    result: data
+                };
+
                 // Process and display results
                 displayResults(data);
 
@@ -132,6 +193,124 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Error displaying results:', error);
             showError('Error displaying results. Please try again.');
         }
+    }
+
+    // Function to generate a shareable link
+    function generateShareLink() {
+        if (!currentResearchData) return;
+
+        // Create a compressed version of the data for sharing
+        const shareData = {
+            q: currentResearchData.question,
+            p: currentResearchData.parameters,
+            r: compressResult(currentResearchData.result)
+        };
+
+        // Convert to base64
+        const base64Data = btoa(JSON.stringify(shareData));
+
+        // Generate the URL
+        const shareUrl = `${window.location.origin}${window.location.pathname}?share=${encodeURIComponent(base64Data)}`;
+
+        // Update the share link input
+        shareLink.value = shareUrl;
+    }
+
+    // Function to compress the result for sharing
+    function compressResult(result) {
+        // Create a simplified version of the result
+        return {
+            explanation: result.explanation,
+            // Include only essential parts of the question tree
+            question_tree: simplifyQuestionTree(result.question_tree)
+        };
+    }
+
+    // Function to simplify the question tree for sharing
+    function simplifyQuestionTree(tree) {
+        if (!tree) return null;
+
+        const simplified = {
+            question: tree.question,
+            depth: tree.depth
+        };
+
+        if (tree.answer) {
+            simplified.answer = tree.answer;
+        }
+
+        if (tree.children && tree.children.length > 0) {
+            simplified.children = tree.children.map(child => simplifyQuestionTree(child));
+        }
+
+        return simplified;
+    }
+
+    // Function to check for shared research in URL
+    function checkForSharedResearch() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const shareData = urlParams.get('share');
+
+        if (shareData) {
+            try {
+                // Decode the share data
+                const decodedData = JSON.parse(atob(decodeURIComponent(shareData)));
+
+                // Set the form values
+                researchQuestion.value = decodedData.q;
+
+                if (decodedData.p) {
+                    recursionDepth.value = decodedData.p.max_recursion_depth || 2;
+                    recursionDepthValue.textContent = recursionDepth.value;
+
+                    subQuestions.value = decodedData.p.max_sub_questions || 3;
+                    subQuestionsValue.textContent = subQuestions.value;
+
+                    recursionThreshold.value = decodedData.p.recursion_threshold || 1;
+                }
+
+                // Store the research data
+                currentResearchData = {
+                    question: decodedData.q,
+                    parameters: decodedData.p,
+                    result: decodedData.r
+                };
+
+                // Display the results
+                if (decodedData.r) {
+                    displayResults(decodedData.r);
+                    resultsSection.classList.remove('hidden');
+                }
+
+                // Show a notification
+                showToast('Viewing shared research results');
+            } catch (error) {
+                console.error('Error parsing shared data:', error);
+                showError('The shared link is invalid or corrupted.');
+            }
+        }
+    }
+
+    // Function to show a toast notification
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.textContent = message;
+
+        document.body.appendChild(toast);
+
+        // Add active class after a small delay to trigger animation
+        setTimeout(() => {
+            toast.classList.add('active');
+        }, 10);
+
+        // Remove toast after 3 seconds
+        setTimeout(() => {
+            toast.classList.remove('active');
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }, 3000);
     }
 
     // Function to show error message
