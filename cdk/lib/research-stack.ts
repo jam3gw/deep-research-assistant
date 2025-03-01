@@ -61,6 +61,11 @@ export class ResearchStack extends cdk.Stack {
         const api = new apigateway.RestApi(this, 'ResearchAPI', {
             restApiName: `research-generator-api-${props.environmentName}`,
             description: 'API for generating research questions and outlines',
+            defaultCorsPreflightOptions: {
+                allowOrigins: apigateway.Cors.ALL_ORIGINS, // Or specify domains: ['https://deep-research-assistant.dev.jake-moses.com']
+                allowMethods: apigateway.Cors.ALL_METHODS,
+                allowHeaders: ['Content-Type'],
+            }
         });
 
         // Create a resource and method for the API

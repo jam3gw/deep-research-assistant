@@ -4,41 +4,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personal Assistant</title>
+    <title>Research Question Generator</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
 <body>
     <div class="container">
         <header>
-            <h1>Personal Assistant</h1>
-            <p>Your AI-powered personal assistant</p>
+            <h1>Research Question Generator</h1>
+            <p>AI-powered tool to break down complex research questions</p>
         </header>
 
         <main>
-            <section class="features">
-                <div class="feature-card">
-                    <h2>Task Management</h2>
-                    <p>Keep track of your tasks and stay organized.</p>
-                </div>
-                <div class="feature-card">
-                    <h2>Calendar Integration</h2>
-                    <p>Sync with your calendar to manage appointments.</p>
-                </div>
-                <div class="feature-card">
-                    <h2>Smart Reminders</h2>
-                    <p>Get timely reminders for important events.</p>
+            <section class="intro">
+                <h2>How It Works</h2>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>Enter Your Question</h3>
+                            <p>Type in a complex research question you want to explore.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>Configure Parameters</h3>
+                            <p>Adjust optional parameters or use the default values.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>Get Results</h3>
+                            <p>Receive a comprehensive answer and see how your question was broken down.</p>
+                        </div>
+                    </div>
                 </div>
             </section>
 
-            <section class="cta">
-                <h2>Ready to get started?</h2>
-                <button id="start-button">Get Started</button>
+            <section class="research-form">
+                <h2>Ask Your Research Question</h2>
+                <form id="question-form">
+                    <div class="form-group">
+                        <label for="research-question">Research Question:</label>
+                        <textarea id="research-question" placeholder="Enter your research question here..."
+                            required></textarea>
+                    </div>
+
+                    <div class="parameters-section">
+                        <h3>Advanced Parameters <button type="button" id="toggle-parameters" class="toggle-button"><i
+                                    class="fas fa-chevron-down"></i></button></h3>
+                        <div id="parameters-container" class="hidden">
+                            <div class="parameter-group">
+                                <div class="form-group">
+                                    <label for="recursion-depth">Maximum Recursion Depth:</label>
+                                    <div class="parameter-input">
+                                        <input type="range" id="recursion-depth" min="0" max="4" value="2">
+                                        <span id="recursion-depth-value">2</span>
+                                    </div>
+                                    <p class="parameter-description">Controls how many levels deep the question can be
+                                        broken down (0-4).</p>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="sub-questions">Maximum Sub-Questions:</label>
+                                    <div class="parameter-input">
+                                        <input type="range" id="sub-questions" min="1" max="5" value="3">
+                                        <span id="sub-questions-value">3</span>
+                                    </div>
+                                    <p class="parameter-description">Limits the number of sub-questions generated at
+                                        each level (1-5).</p>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="recursion-threshold">Recursion Threshold:</label>
+                                    <div class="parameter-input">
+                                        <select id="recursion-threshold">
+                                            <option value="0">Normal (0)</option>
+                                            <option value="1" selected>Conservative (1)</option>
+                                            <option value="2">Very Conservative (2)</option>
+                                        </select>
+                                    </div>
+                                    <p class="parameter-description">Determines how aggressive the system is about
+                                        breaking down questions.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" id="submit-button">Generate Research</button>
+                        <div id="loading-indicator">
+                            <div class="spinner"></div>
+                            <p>Processing your question...</p>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <section id="results-section" class="hidden">
+                <div class="results-container">
+                    <h2>Research Results</h2>
+
+                    <div class="tabs">
+                        <button class="tab-button active" data-tab="answer">Answer</button>
+                        <button class="tab-button" data-tab="visualization">Question Tree</button>
+                        <button class="tab-button" data-tab="json">Raw Data</button>
+                    </div>
+
+                    <div class="tab-content">
+                        <div id="answer-tab" class="tab-pane active">
+                            <div id="answer-content"></div>
+                        </div>
+
+                        <div id="visualization-tab" class="tab-pane">
+                            <div id="tree-visualization"></div>
+                        </div>
+
+                        <div id="json-tab" class="tab-pane">
+                            <pre id="json-content"></pre>
+                        </div>
+                    </div>
+                </div>
             </section>
         </main>
 
         <footer>
-            <p>&copy; 2023 Personal Assistant. All rights reserved.</p>
+            <p>&copy; 2023 Research Question Generator. All rights reserved.</p>
             <p id="environment-tag"></p>
         </footer>
     </div>

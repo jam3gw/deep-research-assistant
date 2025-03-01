@@ -27,7 +27,7 @@ const createStacksForEnvironment = (envKey: string) => {
   const researchStackId = `${baseStackId}ResearchStack`;
 
   // Create the website stack
-  new WebsiteStack(app, websiteStackId, {
+  const websiteStack = new WebsiteStack(app, websiteStackId, {
     domainName: envConfig.domainName,
     hostedZoneName: config.hostedZoneName,
     environmentName: envConfig.name,
@@ -47,6 +47,8 @@ const createStacksForEnvironment = (envKey: string) => {
     },
     tags: envConfig.tags
   });
+
+  websiteStack.addDependency(researchStack);
 };
 
 // If a specific environment is specified, create stacks for that environment only

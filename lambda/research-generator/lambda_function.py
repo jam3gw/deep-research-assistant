@@ -162,7 +162,7 @@ def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DE
         print(f"At depth {depth}, being more conservative about breaking down: {question}")
     
     # Determine if the question needs to be broken down
-    needs_breakdown, sub_questions = should_break_down_question(question, client, recursion_threshold)
+    needs_breakdown, sub_questions = should_break_down_question(question, client, recursion_threshold, max_sub_questions)
     
     # Additional check: if we're at depth > 0 and have no sub-questions or only one, don't break down
     if needs_breakdown and depth > 0 and (not sub_questions or len(sub_questions) <= 1):
@@ -194,7 +194,7 @@ def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DE
             print(f"Getting answer for leaf question: {question}")
             node['answer'] = get_answer_for_question(question, client)
 
-def should_break_down_question(question, client, recursion_threshold=DEFAULT_RECURSION_THRESHOLD):
+def should_break_down_question(question, client, recursion_threshold=DEFAULT_RECURSION_THRESHOLD, max_sub_questions=DEFAULT_SUB_QUESTIONS):
     """
     Use Anthropic to determine if a question should be broken down into sub-questions.
     Returns a tuple of (needs_breakdown, sub_questions)
