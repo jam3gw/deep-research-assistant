@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
 import { WebsiteStack } from '../lib/website-stack';
+import { SecretsStack } from '../lib/secrets-stack';
+import { ResearchStack } from '../lib/research-stack';
 import config from '../config/environments';
 
 const app = new cdk.App();
@@ -12,8 +14,8 @@ const region = process.env.CDK_DEFAULT_REGION || 'us-east-1';
 // Get environment parameter from context or default to all environments
 const targetEnv = app.node.tryGetContext('env');
 
-// Function to create a stack for a specific environment
-const createStackForEnvironment = (envKey: string) => {
+// Function to create stacks for a specific environment
+const createStacksForEnvironment = (envKey: string) => {
   const envConfig = config.environments[envKey];
 
   if (!envConfig) {
@@ -21,9 +23,23 @@ const createStackForEnvironment = (envKey: string) => {
     return;
   }
 
-  const stackId = `PersonalAssistant${envConfig.name.charAt(0).toUpperCase() + envConfig.name.slice(1)}Stack`;
+  const baseStackId = `PersonalAssistant${envConfig.name.charAt(0).toUpperCase() + envConfig.name.slice(1)}`;
+  const secretsStackId = `${baseStackId}SecretsStack`;
+  const websiteStackId = `${baseStackId}WebsiteStack`;
+  const researchStackId = `${baseStackId}ResearchStack`;
 
-  new WebsiteStack(app, stackId, {
+  // Create the secrets stack first
+  const secretsStack = new SecretsStack(app, secretsStackId, {
+    environmentName: envConfig.name,
+    env: {
+      account: account,
+      region: region
+    },
+    tags: envConfig.tags
+  });
+
+  // Create the website stack
+  new WebsiteStack(app, websiteStackId, {
     domainName: envConfig.domainName,
     hostedZoneName: config.hostedZoneName,
     environmentName: envConfig.name,
@@ -34,16 +50,27 @@ const createStackForEnvironment = (envKey: string) => {
     tags: envConfig.tags
   });
 
-  console.log(`Created stack: ${stackId}`);
+  // Create the Research stack with a dependency on the secrets stack
+  const researchStack = new ResearchStack(app, researchStackId, {
+    environmentName: envConfig.name,
+    secretsStackName: secretsStackId, // Pass the secrets stack name for reference
+    env: {
+      account: account,
+      region: region
+    },
+    tags: envConfig.tags
+  });
+
+  // Add explicit dependency on the secrets stack
+  researchStack.addDependency(secretsStack);
+
+  console.log(`Created stacks: ${secretsStackId}, ${websiteStackId}, ${researchStackId}`);
 };
 
-// If a specific environment is specified, create only that stack
-// Otherwise, create stacks for all environments
-if (targetEnv) {
-  createStackForEnvironment(targetEnv);
+// If a specific environment is specified, create stacks for that environment only
+if (targetEnv && targetEnv !== 'all') {
+  createStacksForEnvironment(targetEnv);
 } else {
-  // Create stacks for all environments
-  Object.keys(config.environments).forEach(envKey => {
-    createStackForEnvironment(envKey);
-  });
+  // Otherwise, create stacks for all environments
+  Object.keys(config.environments).forEach(createStacksForEnvironment);
 }
