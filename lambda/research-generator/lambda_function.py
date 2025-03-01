@@ -13,7 +13,10 @@ DEFAULT_SUB_QUESTIONS = 3
 DEFAULT_RECURSION_THRESHOLD = 1
 
 def lambda_handler(event, context):
-    # CORS headers to include in all responses
+    # Check if this is a Lambda Function URL invocation (it will have 'requestContext.http' in the event)
+    is_function_url = 'requestContext' in event and 'http' in event.get('requestContext', {})
+    
+    # CORS headers to include in all responses (only when not using Function URL)
     cors_headers = {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
@@ -23,7 +26,7 @@ def lambda_handler(event, context):
     
     # Handle preflight OPTIONS request
     if event.get('httpMethod') == 'OPTIONS':
-        return build_response(200, {})
+        return build_response(200, {}, not is_function_url)
     
     # Get the parameter name from environment variables
     parameter_name = os.environ['ANTHROPIC_API_KEY_SECRET_NAME']
@@ -59,7 +62,7 @@ def lambda_handler(event, context):
             if not main_question:
                 return build_response(400, {
                     'error': 'Missing required parameter. Please provide a research topic.'
-                })
+                }, not is_function_url)
 
             # Get user-specified parameters with validation
             max_recursion_depth = min(
@@ -119,19 +122,19 @@ def lambda_handler(event, context):
                 },
                 'success': True,
                 'formatted': True
-            })
+            }, not is_function_url)
             
         except json.JSONDecodeError:
-            return build_response(400, {'error': 'Invalid JSON in request body'})
+            return build_response(400, {'error': 'Invalid JSON in request body'}, not is_function_url)
         except ValueError as ve:
-            return build_response(400, {'error': f'Invalid parameter value: {str(ve)}'})
+            return build_response(400, {'error': f'Invalid parameter value: {str(ve)}'}, not is_function_url)
         
     except Exception as e:
         print(f"Error: {str(e)}")
         print(f"Error type: {type(e)}")
         import traceback
         traceback.print_exc()
-        return build_response(500, {'error': f'Internal server error: {str(e)}'})
+        return build_response(500, {'error': f'Internal server error: {str(e)}'}, not is_function_url)
 
 def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DEPTH, 
                          max_sub_questions=DEFAULT_SUB_QUESTIONS, recursion_threshold=DEFAULT_RECURSION_THRESHOLD):
@@ -773,18 +776,25 @@ def extract_content(message):
     else:
         return str(message)
 
-def build_response(status_code, body):
-    """Helper function to build CORS-compliant responses."""
-    return {
+def build_response(status_code, body, include_cors=True):
+    """Helper function to build responses, optionally with CORS headers."""
+    response = {
         'statusCode': status_code,
         'headers': {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'OPTIONS,POST',
-            'Access-Control-Allow-Headers': 'Content-Type'
         },
         'body': json.dumps(body)
     }
+    
+    # Add CORS headers only if needed (not for Function URL invocations)
+    if include_cors:
+        response['headers'].update({
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'OPTIONS,POST',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        })
+    
+    return response
 
 def get_concise_summary_for_broad_question(question, client):
     """

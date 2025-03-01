@@ -23,9 +23,78 @@ This is the frontend for the Research Question Generator, a tool that uses AI to
 
 ## Technical Details
 
-- The frontend connects to the Research Generator Lambda function via API Gateway.
-- The API endpoint is currently hardcoded to: `https://ow5zhzdho1.execute-api.us-west-2.amazonaws.com/prod/`
+- The frontend can connect to the Research Generator Lambda function in two ways:
+  1. Via API Gateway (original method)
+  2. Directly via Lambda Function URL (new method, recommended for longer-running requests)
+- The Lambda Function URL allows for longer execution times (up to 15 minutes) compared to API Gateway (max 30 seconds)
 - The frontend is built with vanilla HTML, CSS, and JavaScript (no frameworks).
+
+## Using Lambda Function URL
+
+The website now uses direct invocation of the Lambda function using Lambda Function URLs, which bypasses the 30-second timeout limitation of API Gateway.
+
+### Setting Up Lambda Function URL
+
+1. Deploy your CDK stack with the Lambda Function URL enabled:
+   ```bash
+   cd cdk
+   npm run deploy:dev  # or deploy:prod for production
+   ```
+
+### Testing with Lambda Function URL
+
+When testing locally:
+
+1. Start your local server using one of the methods below
+2. Open the website in your browser
+3. Submit your research question
+
+The request will go directly to the Lambda function, bypassing API Gateway and its 30-second timeout limitation.
+
+## Local Development and Testing
+
+### Using Python's Built-in HTTP Server (Recommended)
+
+1. Make sure you have Python installed (Python 3.x recommended)
+2. Open a terminal and navigate to the website directory:
+   ```bash
+   cd /Users/Macbook/Github-Projects/personal-assistant/website
+   ```
+3. Start the HTTP server:
+   ```bash
+   python -m http.server 8000
+   ```
+4. Open your browser and navigate to:
+   ```
+   http://localhost:8000
+   ```
+5. To stop the server, press `Ctrl+C` in the terminal
+
+### Alternative Methods
+
+#### Using Node.js and http-server
+
+If you have Node.js installed:
+
+1. Install http-server globally:
+   ```bash
+   npm install -g http-server
+   ```
+2. Navigate to the website directory:
+   ```bash
+   cd /Users/Macbook/Github-Projects/personal-assistant/website
+   ```
+3. Start the server:
+   ```bash
+   http-server -p 8000
+   ```
+4. Access the site at `http://localhost:8000`
+
+#### Using VS Code Live Server Extension
+
+1. Install the "Live Server" extension in VS Code
+2. Open the website directory in VS Code
+3. Right-click on `index.html` and select "Open with Live Server"
 
 ## Deployment
 
@@ -33,14 +102,6 @@ To deploy this frontend:
 
 1. Upload all files in the `website` directory to your web hosting service.
 2. No build process is required as this is a static website.
-
-## Local Development
-
-To run the frontend locally:
-
-1. Clone the repository.
-2. Navigate to the `website` directory.
-3. Open `index.html` in your browser.
 
 ## API Parameters
 
@@ -69,6 +130,4 @@ To customize the appearance:
 
 ## API Endpoint Configuration
 
-To change the API endpoint:
-1. Open `js/main.js`
-2. Update the `API_ENDPOINT` constant at the top of the file. 
+The Lambda Function URL is configured in the `js/aws-config.js` file. After deploying your CDK stack, run the `get-lambda-url.sh` script to automatically update this file with the correct URL. 

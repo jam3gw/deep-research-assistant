@@ -1,7 +1,4 @@
 document.addEventListener('DOMContentLoaded', function () {
-    // API endpoint
-    const API_ENDPOINT = 'https://ow5zhzdho1.execute-api.us-west-2.amazonaws.com/prod/research';
-
     // DOM elements
     const questionForm = document.getElementById('question-form');
     const researchQuestion = document.getElementById('research-question');
@@ -63,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Validate form
         if (!researchQuestion.value.trim()) {
-            alert('Please enter a research question.');
+            showError('Please enter a research question.');
             return;
         }
 
@@ -71,6 +68,7 @@ document.addEventListener('DOMContentLoaded', function () {
         submitButton.disabled = true;
         loadingIndicator.classList.add('active');
         resultsSection.classList.add('hidden');
+        clearPreviousResults();
 
         // Prepare request data
         const requestData = {
@@ -80,20 +78,8 @@ document.addEventListener('DOMContentLoaded', function () {
             recursion_threshold: parseInt(recursionThreshold.value)
         };
 
-        // Make API request
-        fetch(API_ENDPOINT, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestData)
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
+        // Invoke Lambda directly via Function URL
+        invokeLambda(requestData)
             .then(data => {
                 // Process and display results
                 displayResults(data);
@@ -106,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while processing your request. Please try again.');
+                showError(error.message || 'An error occurred while processing your request. Please try again.');
             })
             .finally(() => {
                 // Always hide loading indicator and enable submit button
@@ -117,26 +103,80 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to display results
     function displayResults(data) {
-        // Display answer
-        answerContent.innerHTML = data.explanation || 'No explanation available.';
+        try {
+            // Display answer
+            if (data.explanation) {
+                answerContent.innerHTML = data.explanation;
+            } else {
+                answerContent.innerHTML = '<p class="error-message">No explanation available.</p>';
+            }
 
-        // Display tree visualization
-        if (data.tree_visualization) {
-            treeVisualization.innerHTML = data.tree_visualization;
+            // Display tree visualization
+            if (data.tree_visualization) {
+                treeVisualization.innerHTML = data.tree_visualization;
 
-            // Execute scripts in the visualization
-            const scripts = treeVisualization.querySelectorAll('script');
-            scripts.forEach(script => {
-                const newScript = document.createElement('script');
-                newScript.textContent = script.textContent;
-                document.body.appendChild(newScript);
-            });
-        } else {
-            treeVisualization.innerHTML = '<p>No visualization available.</p>';
+                // Execute scripts in the visualization
+                const scripts = treeVisualization.querySelectorAll('script');
+                scripts.forEach(script => {
+                    const newScript = document.createElement('script');
+                    newScript.textContent = script.textContent;
+                    document.body.appendChild(newScript);
+                });
+            } else {
+                treeVisualization.innerHTML = '<p class="error-message">No visualization available.</p>';
+            }
+
+            // Display JSON data
+            jsonContent.textContent = JSON.stringify(data, null, 2);
+        } catch (error) {
+            console.error('Error displaying results:', error);
+            showError('Error displaying results. Please try again.');
         }
+    }
 
-        // Display JSON data
-        jsonContent.textContent = JSON.stringify(data, null, 2);
+    // Function to show error message
+    function showError(message) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-notification';
+        errorDiv.innerHTML = `
+            <div class="error-icon"><i class="fas fa-exclamation-circle"></i></div>
+            <div class="error-message">${message}</div>
+            <button class="error-close">&times;</button>
+        `;
+
+        document.body.appendChild(errorDiv);
+
+        // Add active class after a small delay to trigger animation
+        setTimeout(() => {
+            errorDiv.classList.add('active');
+        }, 10);
+
+        // Remove error after 5 seconds
+        const timeout = setTimeout(() => {
+            removeError(errorDiv);
+        }, 5000);
+
+        // Close button
+        const closeButton = errorDiv.querySelector('.error-close');
+        closeButton.addEventListener('click', () => {
+            clearTimeout(timeout);
+            removeError(errorDiv);
+        });
+    }
+
+    // Function to remove error notification
+    function removeError(errorDiv) {
+        errorDiv.classList.remove('active');
+        setTimeout(() => {
+            errorDiv.remove();
+        }, 300);
+    }
+
+    // Function to clear previous results
+    function clearPreviousResults() {
+        answerContent.innerHTML = '';
+        treeVisualization.innerHTML = '';
+        jsonContent.textContent = '';
     }
 
     // Detect environment based on URL

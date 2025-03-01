@@ -57,6 +57,17 @@ export class ResearchStack extends cdk.Stack {
             resources: [anthropicApiParam.parameterArn],
         }));
 
+        // Add a Lambda Function URL with CORS enabled
+        const functionUrl = researchGenerator.addFunctionUrl({
+            authType: lambda.FunctionUrlAuthType.NONE, // No authentication required
+            cors: {
+                allowedOrigins: ['*'], // Allow all origins
+                allowedMethods: [lambda.HttpMethod.ALL], // Allow all HTTP methods
+                allowedHeaders: ['*'], // Allow all headers
+                allowCredentials: true, // Allow credentials
+            },
+        });
+
         // Create an API Gateway REST API
         const api = new apigateway.RestApi(this, 'ResearchAPI', {
             restApiName: `research-generator-api-${props.environmentName}`,
@@ -84,6 +95,18 @@ export class ResearchStack extends cdk.Stack {
         new cdk.CfnOutput(this, 'ResearchGeneratorArn', {
             value: researchGenerator.functionArn,
             description: 'The ARN of the Research Generator Lambda function',
+        });
+
+        // Output the Lambda Function URL
+        new cdk.CfnOutput(this, 'ResearchGeneratorFunctionUrl', {
+            value: functionUrl.url,
+            description: 'The URL of the Research Generator Lambda Function URL',
+        });
+
+        // Output the Lambda function name
+        new cdk.CfnOutput(this, 'ResearchGeneratorFunctionName', {
+            value: researchGenerator.functionName,
+            description: 'The name of the Research Generator Lambda function',
         });
     }
 } 
