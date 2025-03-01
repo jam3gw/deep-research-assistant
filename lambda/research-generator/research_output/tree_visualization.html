@@ -1,0 +1,293 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Research Question Tree</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 20px;
+                line-height: 1.6;
+            }
+            .tree-container {
+                margin: 20px 0;
+            }
+            .node {
+                margin: 10px 0;
+                border-radius: 5px;
+                overflow: hidden;
+            }
+            .question-node {
+                background-color: #e6f7ff;
+                border-left: 4px solid #1890ff;
+            }
+            .max-depth-node {
+                background-color: #fff7e6;
+                border-left: 4px solid #fa8c16;
+            }
+            .answer-node {
+                background-color: #f6ffed;
+                border-left: 4px solid #52c41a;
+                margin-left: 20px;
+                padding: 10px;
+                display: none; /* Hidden by default */
+            }
+            .node-header {
+                padding: 10px;
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .node-title {
+                font-weight: bold;
+                flex-grow: 1;
+            }
+            .depth-indicator {
+                color: #888;
+                font-size: 0.8em;
+                margin-right: 10px;
+            }
+            .toggle-icon {
+                font-size: 18px;
+                width: 20px;
+                text-align: center;
+            }
+            .children {
+                margin-left: 30px;
+                border-left: 1px dashed #d9d9d9;
+                padding-left: 20px;
+                display: none; /* Hidden by default */
+            }
+            .expanded > .children, 
+            .expanded > .answer-node {
+                display: block; /* Show when expanded */
+            }
+            .node-content {
+                padding: 0 10px 10px 10px;
+            }
+            .max-depth-badge {
+                display: inline-block;
+                background-color: #fa8c16;
+                color: white;
+                font-size: 0.8em;
+                padding: 2px 8px;
+                border-radius: 10px;
+                margin-left: 10px;
+            }
+            .detail-view {
+                position: fixed;
+                top: 0;
+                right: 0;
+                width: 40%;
+                height: 100%;
+                background: white;
+                border-left: 1px solid #ccc;
+                box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+                padding: 20px;
+                overflow-y: auto;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+                z-index: 1000;
+            }
+            .detail-view.active {
+                transform: translateX(0);
+            }
+            .detail-view-close {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                font-size: 24px;
+                cursor: pointer;
+                background: none;
+                border: none;
+            }
+            .detail-view-title {
+                margin-top: 0;
+                padding-right: 30px;
+            }
+            .detail-view-content {
+                margin-top: 20px;
+            }
+            .expand-all-btn, .collapse-all-btn {
+                background-color: #1890ff;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                cursor: pointer;
+                margin-right: 10px;
+                margin-bottom: 20px;
+            }
+            .collapse-all-btn {
+                background-color: #52c41a;
+            }
+            .button-container {
+                margin-bottom: 20px;
+            }
+            .note {
+                background-color: #fff3cd;
+                border-left: 4px solid #ffc107;
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Research Question Tree</h1>
+        <p>Click on any question to expand/collapse. Click "View Details" to see the full answer.</p>
+        
+        <div class="button-container">
+            <button class="expand-all-btn" onclick="expandAll()">Expand All</button>
+            <button class="collapse-all-btn" onclick="collapseAll()">Collapse All</button>
+        </div>
+        
+        <div class="tree-container">
+    
+    <div class="node question-node" id="c42a1cbb-3ade-4a76-8c43-d3312145a280">
+        <div class="node-header" onclick="toggleNode('c42a1cbb-3ade-4a76-8c43-d3312145a280')">
+            <span class="depth-indicator">Depth 0:</span>
+            <span class="node-title">Question: What is 2+2</span>
+            <span class="toggle-icon">+</span>
+        </div>
+        <div class="node-content">
+            <button onclick="showDetails('c42a1cbb-3ade-4a76-8c43-d3312145a280', true); event.stopPropagation();">View Details</button>
+            
+        </div>
+    
+        <div class="answer-node" id="answer-c42a1cbb-3ade-4a76-8c43-d3312145a280">
+            <h3>Answer:</h3>
+            <div>Here is a detailed answer to the question "What is 2+2?":
+
+<h3>What is 2+2?</h3>
+
+<p>The mathematical expression "2+2" is a simple addition problem that asks what the sum of the numbers 2 and 2 is. In other words, it is asking what number results when you add the quantity 2 to the quantity 2.</p>
+
+<p>To solve this problem, we can use our knowledge of basic arithmetic. Addition is one of the fundamental mathematical operations, where we combine two or more numbers to get a new, larger number.</p>
+
+<p>When we add 2 and 2 together, the result is 4. This is because:</p>
+
+<ol>
+  <li><strong>2</strong> represents a quantity of 2 units.</li>
+  <li><strong>2</strong> also represents a quantity of 2 units.</li>
+  <li>When we add these two quantities together, we get a total of 4 units.</li>
+  <li>Therefore, the answer to the expression "2+2" is <strong>4</strong>.</li>
+</ol>
+
+<hr>
+
+<p>In summary, 2+2=4 because when you combine two quantities of 2, the total amount is 4. This is a basic arithmetic fact that is fundamental to mathematics and can be easily verified through simple counting or using visual aids like blocks or fingers.</p></div>
+            <button onclick="showDetails('answer-c42a1cbb-3ade-4a76-8c43-d3312145a280', false); event.stopPropagation();">View Full Answer</button>
+        </div>
+        </div>
+        </div>
+        
+        <div class="detail-view" id="detailView">
+            <button class="detail-view-close" onclick="closeDetailView()">&times;</button>
+            <h2 class="detail-view-title" id="detailViewTitle">Question Details</h2>
+            <div class="detail-view-content" id="detailViewContent"></div>
+        </div>
+        
+        <script>
+            // Toggle node expansion
+            function toggleNode(nodeId) {
+                const node = document.getElementById(nodeId);
+                node.classList.toggle('expanded');
+                
+                // Update toggle icon
+                const icon = node.querySelector('.toggle-icon');
+                if (node.classList.contains('expanded')) {
+                    icon.textContent = '−';
+                } else {
+                    icon.textContent = '+';
+                }
+            }
+            
+            // Show detail view
+            function showDetails(nodeId, isQuestion) {
+                const node = document.getElementById(nodeId);
+                const detailView = document.getElementById('detailView');
+                const detailViewTitle = document.getElementById('detailViewTitle');
+                const detailViewContent = document.getElementById('detailViewContent');
+                
+                if (isQuestion) {
+                    const questionText = node.querySelector('.node-title').textContent.split(':')[1].trim();
+                    detailViewTitle.textContent = 'Question: ' + questionText;
+                    
+                    // Check if this node has children or an answer
+                    const children = node.querySelector('.children');
+                    const answer = node.querySelector('.answer-node');
+                    
+                    let content = '';
+                    if (children && children.childElementCount > 0) {
+                        content = '<h3>Sub-questions:</h3><ul>';
+                        const subQuestions = children.querySelectorAll('.node-title');
+                        subQuestions.forEach(sq => {
+                            content += '<li>' + sq.textContent.split(':')[1].trim() + '</li>';
+                        });
+                        content += '</ul>';
+                    } else if (answer) {
+                        content = '<h3>Answer:</h3>' + answer.innerHTML;
+                    } else {
+                        content = '<p>No answer or sub-questions available.</p>';
+                    }
+                    
+                    detailViewContent.innerHTML = content;
+                } else {
+                    // It's an answer node
+                    const questionNode = node.closest('.question-node');
+                    const questionText = questionNode.querySelector('.node-title').textContent.split(':')[1].trim();
+                    detailViewTitle.textContent = 'Answer to: ' + questionText;
+                    
+                    // Get the answer content
+                    detailViewContent.innerHTML = node.innerHTML;
+                }
+                
+                detailView.classList.add('active');
+            }
+            
+            // Close detail view
+            function closeDetailView() {
+                document.getElementById('detailView').classList.remove('active');
+            }
+            
+            // Expand all nodes
+            function expandAll() {
+                document.querySelectorAll('.question-node').forEach(node => {
+                    node.classList.add('expanded');
+                    const icon = node.querySelector('.toggle-icon');
+                    if (icon) icon.textContent = '−';
+                });
+            }
+            
+            // Collapse all nodes
+            function collapseAll() {
+                document.querySelectorAll('.question-node').forEach(node => {
+                    // Don't collapse the root node
+                    if (node.parentElement.classList.contains('tree-container')) {
+                        node.classList.add('expanded');
+                        const icon = node.querySelector('.toggle-icon');
+                        if (icon) icon.textContent = '−';
+                    } else {
+                        node.classList.remove('expanded');
+                        const icon = node.querySelector('.toggle-icon');
+                        if (icon) icon.textContent = '+';
+                    }
+                });
+            }
+            
+            // Initialize: expand the root node
+            document.addEventListener('DOMContentLoaded', function() {
+                const rootNode = document.querySelector('.tree-container > .question-node');
+                if (rootNode) {
+                    rootNode.classList.add('expanded');
+                    const icon = rootNode.querySelector('.toggle-icon');
+                    if (icon) icon.textContent = '−';
+                }
+            });
+        </script>
+    </body>
+    </html>
+    

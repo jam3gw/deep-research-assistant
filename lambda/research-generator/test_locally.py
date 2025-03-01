@@ -1,25 +1,53 @@
 #!/usr/bin/env python3
 """
-Test script for the research generator Lambda function.
+Test script for the research generator Lambda function with recursive question breakdown.
 This allows you to test the function locally before deploying to AWS.
 
 Usage:
-    python test_locally.py "climate change impacts on agriculture"
+    python test_locally.py "What are the economic and environmental impacts of renewable energy adoption globally?"
+    python test_locally.py --threshold 2 "What are the economic and environmental impacts of renewable energy adoption globally?"
 """
 
 import sys
 import json
 import os
+import uuid
+import argparse
 from anthropic import Anthropic
 
+# Import the functions from lambda_function.py
+from lambda_function import (
+    process_question_node,
+    should_break_down_question,
+    get_answer_for_question,
+    aggregate_answers,
+    generate_tree_visualization,
+    extract_content,
+    MAX_RECURSION_DEPTH,
+    MAX_SUB_QUESTIONS,
+    RECURSION_THRESHOLD
+)
+
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python test_locally.py \"your research topic\"")
-        sys.exit(1)
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Test the research generator with recursive question breakdown.')
+    parser.add_argument('question', type=str, help='The research question to process')
+    parser.add_argument('--threshold', '-t', type=int, choices=[0, 1, 2], default=None, 
+                        help='Recursion threshold (0=normal, 1=conservative, 2=very conservative)')
+    args = parser.parse_args()
     
-    # Get the topic from command line arguments
-    topic = sys.argv[1]
-    print(f"Generating research for topic: {topic}")
+    # Get the question from command line arguments
+    main_question = args.question
+    print(f"Processing research question: {main_question}")
+    
+    # Set recursion threshold if provided
+    if args.threshold is not None:
+        # We need to modify the module's global variable
+        import lambda_function
+        lambda_function.RECURSION_THRESHOLD = args.threshold
+        print(f"Set recursion threshold to: {args.threshold}")
+    else:
+        print(f"Using default recursion threshold: {RECURSION_THRESHOLD}")
     
     # Set environment variables (you'll need to set your API key)
     if 'ANTHROPIC_API_KEY' not in os.environ:
@@ -34,67 +62,87 @@ def main():
         print("Initializing Anthropic client...")
         client = Anthropic(api_key=api_key)
         
-        # Create the message for Claude
-        prompt = f"""You are a research assistant.
+        # Start the recursive question breakdown and answering process
+        print("\n--- Starting Question Breakdown Process ---")
+        question_tree = {
+            'id': str(uuid.uuid4()),
+            'question': main_question,
+            'depth': 0,
+            'children': []
+        }
         
-        A student has asked you to research this prompt: {topic}
-        """
+        # Process the question tree recursively
+        process_question_node(question_tree, client)
         
-        # Get response from Claude using the Messages API
-        print("Sending request to Anthropic API...")
-        message = client.messages.create(
-            model="claude-3-haiku-20240307",
-            max_tokens=1000,
-            temperature=0.5,
-            system="You are a helpful and friendly research assistant that explains complex concepts in simple terms. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <ol> and <li> for numbered steps, <strong> for emphasis, and <hr> for section dividers.",
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
+        # Print the question tree structure
+        print("\n--- Question Tree Structure ---")
+        print_tree_structure(question_tree)
         
-        # Extract the response text
-        print("Response received from Anthropic API.")
+        # Generate the final aggregated answer
+        print("\n--- Generating Final Answer ---")
+        final_answer = aggregate_answers(question_tree, client)
         
-        # Extract text based on the response structure
-        explanation = ""
-        if hasattr(message, 'content'):
-            content = message.content
-            if isinstance(content, list):
-                # If content is a list of blocks
-                text_parts = []
-                for item in content:
-                    if hasattr(item, 'text'):
-                        text_parts.append(item.text)
-                    elif hasattr(item, 'value'):
-                        text_parts.append(item.value)
-                    elif isinstance(item, str):
-                        text_parts.append(item)
-                explanation = " ".join(text_parts)
-            elif isinstance(content, str):
-                # If content is already a string
-                explanation = content
-            else:
-                # Fallback: convert to string representation
-                explanation = str(content)
-        else:
-            explanation = str(message)
+        # Generate a visualization of the thought tree
+        tree_visualization = generate_tree_visualization(question_tree)
         
         # Print the result
-        print("\nGenerated Research:")
-        print(explanation)
+        print("\n--- Final Research Answer ---")
+        print(final_answer)
         
-        # Save to a file
-        output_file = "research_output.json"
-        with open(output_file, "w") as f:
-            json.dump({"explanation": explanation}, f, indent=2)
-        print(f"\nOutput saved to {output_file}")
+        # Save to files
+        output_dir = "research_output"
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Save the question tree
+        with open(f"{output_dir}/question_tree.json", "w") as f:
+            json.dump(question_tree, f, indent=2)
+        print(f"\nQuestion tree saved to {output_dir}/question_tree.json")
+        
+        # Save the final answer
+        with open(f"{output_dir}/final_answer.html", "w") as f:
+            f.write(final_answer)
+        print(f"Final answer saved to {output_dir}/final_answer.html")
+        
+        # Save the tree visualization
+        with open(f"{output_dir}/tree_visualization.html", "w") as f:
+            f.write(tree_visualization)
+        print(f"Tree visualization saved to {output_dir}/tree_visualization.html")
+        
+        # Save the complete output
+        complete_output = {
+            'explanation': final_answer,
+            'tree_visualization': tree_visualization,
+            'question_tree': question_tree,
+            'recursion_threshold': args.threshold if args.threshold is not None else RECURSION_THRESHOLD
+        }
+        with open(f"{output_dir}/complete_output.json", "w") as f:
+            json.dump(complete_output, f, indent=2)
+        print(f"Complete output saved to {output_dir}/complete_output.json")
         
     except Exception as e:
         import traceback
-        print(f"Error generating research: {str(e)}")
+        print(f"Error processing research question: {str(e)}")
         print("Full traceback:")
         traceback.print_exc()
         sys.exit(1)
+
+def print_tree_structure(node, indent=0):
+    """
+    Print the question tree structure in a readable format
+    """
+    prefix = "  " * indent
+    print(f"{prefix}Question: {node['question']}")
+    
+    if node.get('needs_breakdown', False):
+        print(f"{prefix}Broken down into {len(node['children'])} sub-questions:")
+        for child in node['children']:
+            print_tree_structure(child, indent + 1)
+    else:
+        if 'answer' in node:
+            answer_preview = node['answer'][:100] + "..." if len(node['answer']) > 100 else node['answer']
+            print(f"{prefix}Answer: {answer_preview}")
+        else:
+            print(f"{prefix}No answer yet")
 
 if __name__ == "__main__":
     main() 

@@ -14,7 +14,7 @@ const config: AppConfig = {
     environments: {
         dev: {
             name: 'dev',
-            domainName: 'personal-assistant.dev.jake-moses.com',
+            domainName: 'deep-research-assistant.dev.jake-moses.com',
             tags: {
                 Environment: 'development',
                 Project: 'PersonalAssistant'
@@ -22,7 +22,7 @@ const config: AppConfig = {
         },
         prod: {
             name: 'prod',
-            domainName: 'personal-assistant.jake-moses.com',
+            domainName: 'deep-research-assistant.jake-moses.com',
             tags: {
                 Environment: 'production',
                 Project: 'PersonalAssistant'

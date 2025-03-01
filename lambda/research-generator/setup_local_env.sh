@@ -1,28 +1,34 @@
 #!/bin/bash
-# Script to set up the local environment with the correct dependency versions
+# Script to set up the local environment for testing the research generator
 
-# Check if virtual environment exists
-if [ ! -d "venv" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv venv
-fi
+# Create and activate a virtual environment
+echo "Creating virtual environment..."
+python -m venv venv
 
 # Activate the virtual environment
-echo "Activating virtual environment..."
-source venv/bin/activate
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+    echo "Activating virtual environment on Windows..."
+    source venv/Scripts/activate
+else
+    echo "Activating virtual environment on Unix-like system..."
+    source venv/bin/activate
+fi
 
-# Upgrade pip
-echo "Upgrading pip..."
-pip install --upgrade pip
-
-# Install dependencies from requirements.txt
-echo "Installing dependencies from requirements.txt..."
+# Install dependencies
+echo "Installing dependencies..."
 pip install -r requirements.txt
 
-# Show installed versions
-echo -e "\nInstalled package versions:"
-pip list | grep -E "anthropic|boto3|requests"
-
-echo -e "\nSetup complete! You can now run the test_locally.py script."
-echo "Remember to activate the virtual environment with:"
-echo "source venv/bin/activate" 
+# Remind user to set API key
+echo ""
+echo "Setup complete! Before running the test script, set your Anthropic API key:"
+echo "export ANTHROPIC_API_KEY=your_api_key"
+echo ""
+echo "Then run the test script with:"
+echo "python test_locally.py \"What are the economic and environmental impacts of renewable energy adoption globally?\""
+echo ""
+echo "You can control the recursion behavior with the --threshold parameter:"
+echo "python test_locally.py --threshold 0 \"Your question\"  # Normal recursion (more aggressive)"
+echo "python test_locally.py --threshold 1 \"Your question\"  # Conservative recursion (default)"
+echo "python test_locally.py --threshold 2 \"Your question\"  # Very conservative recursion (minimal)"
+echo ""
+echo "The results will be saved in the research_output directory." 
