@@ -14,6 +14,37 @@ This application uses Claude AI (via Anthropic's API) to create a hierarchical a
    - Synthesizes the answers into a comprehensive explanation
    - Provides an interactive visualization of the question breakdown
 
+## Deep Research Assistant: Under the Hood
+
+The Deep Research Assistant uses a sophisticated recursive approach to handle complex research questions:
+
+### How It Works
+
+1. **Question Analysis**: When a question is submitted, the system first analyzes its complexity to determine if it needs to be broken down.
+2. **Recursive Breakdown**: Complex questions are intelligently divided into simpler sub-questions, which may be further broken down if needed (up to the maximum recursion depth).
+3. **Parallel Processing**: The system processes multiple sub-questions simultaneously to provide faster results.
+4. **Individual Answers**: Each leaf question (one that doesn't need further breakdown) receives its own detailed answer.
+5. **Answer Synthesis**: All individual answers are combined into a comprehensive, well-structured response to the original question.
+6. **Visualization**: The question tree visualization shows exactly how the question was broken down and answered.
+
+### Technical Implementation
+
+- **Recursive Algorithm**: The core of the system is a recursive algorithm that breaks down questions and processes them in a tree-like structure.
+- **Intelligent Validation**: The system validates that sub-questions are genuinely simpler than their parent questions and relevant to the original query.
+- **Parallel Processing**: Multiple sub-questions are processed concurrently using async/await patterns for efficiency.
+- **Exponential Backoff**: API calls include retry logic with exponential backoff to handle rate limiting and service overloads.
+- **Adaptive Response Generation**: Different types of questions receive different treatment (e.g., vague questions, broad topics, specific inquiries).
+
+### Example Questions to Try
+
+The system excels at handling complex, multi-faceted questions such as:
+
+1. "What are the economic and environmental impacts of renewable energy adoption globally?"
+2. "How has artificial intelligence influenced modern healthcare systems, and what ethical concerns have emerged?"
+3. "What are the psychological and sociological factors that contribute to the spread of misinformation on social media?"
+4. "How do different educational approaches affect childhood development and future career success?"
+5. "What are the most promising technologies for addressing climate change, and what are their limitations?"
+
 ## Architecture
 
 The application consists of:
@@ -74,6 +105,24 @@ The Lambda function requires the following environment variables:
    python -m http.server 8000
    ```
 4. Access the application at `http://localhost:8000`
+
+### Testing Locally
+
+You can test the research generator locally using the provided test script:
+
+```bash
+cd lambda/research-generator
+python test_locally.py "Your research question here"
+```
+
+Additional options:
+```bash
+# Set recursion depth and max sub-questions
+python test_locally.py --depth 3 --sub-questions 4 "Your research question"
+
+# Skip visualization to save time
+python test_locally.py --skip-visualization "Your research question"
+```
 
 ## Deployment
 

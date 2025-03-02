@@ -33,7 +33,7 @@ Note: Some questions in this research were addressed with broader topic response
     
     prompt = f"""You are a research assistant tasked with synthesizing information from multiple sources.
 
-I've broken down a complex question into sub-questions and found answers to each. Now I need you to synthesize this information into a comprehensive answer to the original question.
+I've broken down a complex question into sub-questions and found answers to each. Now I need you to synthesize this information into a concise, well-structured answer to the original question.
 
 Original question: {question_tree['question']}
 
@@ -43,15 +43,45 @@ Here is the breakdown of questions and answers:
 
 {tree_representation}
 
-Please synthesize all this information into a comprehensive, well-structured answer to the original question. Use HTML formatting for better readability.
-Be concise and direct while ensuring all key points are covered.
+Please synthesize all this information into a concise, well-structured answer to the original question. Focus on clarity and brevity while ensuring all key points are covered.
+
+IMPORTANT FORMATTING GUIDELINES:
+1. Use a clear hierarchical structure with headings and subheadings
+2. Keep paragraphs short and focused (3-4 sentences maximum)
+3. Use bullet points for lists whenever possible
+4. Avoid unnecessary repetition or filler text
+5. Include a very brief introduction and conclusion
+6. Use HTML formatting for better readability
+
+Your response should be approximately 30-40% shorter than a typical comprehensive explanation while maintaining all key information.
 """
 
     message = client.messages.create(
         model=DEFAULT_MODEL,
         max_tokens=DEFAULT_SYNTHESIS_MAX_TOKENS,
         temperature=0.0,
-        system="You are a helpful research assistant that synthesizes information from multiple sources. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <ol> and <li> for numbered steps, <strong> for emphasis, and <hr> for section dividers. Be concise and direct in your explanations.",
+        system="""You are a helpful research assistant that synthesizes information from multiple sources into concise, well-structured responses.
+
+FORMAT YOUR RESPONSE WITH THESE HTML ELEMENTS:
+- <div class="research-answer"> as the main container
+- <h2> for the main title
+- <h3> for section titles
+- <p> for paragraphs (keep them short)
+- <ul> and <li> for unordered lists
+- <ol> and <li> for ordered lists
+- <strong> for emphasis
+- <hr> for section dividers
+- <div class="summary"> for the conclusion
+
+STYLING GUIDELINES:
+- Be concise and direct
+- Prioritize clarity over comprehensiveness
+- Use bullet points liberally
+- Avoid unnecessary words and phrases
+- Structure information hierarchically
+- Make the content scannable
+
+Your goal is to create a response that is both informative and easy to quickly digest.""",
         messages=[
             {"role": "user", "content": prompt}
         ]
@@ -59,17 +89,74 @@ Be concise and direct while ensuring all key points are covered.
     
     content = extract_content(message)
     
+    # Add CSS styling for better presentation
+    css_styling = """
+<style>
+.research-answer {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    color: #333;
+}
+h2 {
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+    margin-top: 30px;
+}
+h3 {
+    color: #2980b9;
+    margin-top: 25px;
+    font-weight: 600;
+}
+p {
+    margin-bottom: 15px;
+}
+ul, ol {
+    margin-bottom: 20px;
+    padding-left: 25px;
+}
+li {
+    margin-bottom: 8px;
+}
+.summary {
+    background-color: #f8f9fa;
+    border-left: 4px solid #3498db;
+    padding: 15px;
+    margin: 25px 0;
+}
+hr {
+    border: 0;
+    height: 1px;
+    background: #e0e0e0;
+    margin: 25px 0;
+}
+.note {
+    background-color: #e6f7ff;
+    border-left: 4px solid #1890ff;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+</style>
+"""
+    
+    # Ensure content is wrapped in the main container if not already
+    if "<div class=\"research-answer\">" not in content:
+        content = f"<div class=\"research-answer\">{content}</div>"
+    
     # Add disclaimers at the beginning if needed
     disclaimers = ""
     if has_vague_questions:
-        disclaimers += """<div class="note" style="background-color: #e6f7ff; border-left: 4px solid #1890ff; padding: 15px; margin-bottom: 20px;">
+        disclaimers += """<div class="note">
         <strong>Note:</strong> Some topics include broader responses due to their wide scope.
         </div>"""
     
-    if disclaimers:
-        return disclaimers + content
+    # Combine everything
+    final_output = css_styling + disclaimers + content
     
-    return content
+    return final_output
 
 def has_complete_answers(node):
     """

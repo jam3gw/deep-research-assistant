@@ -12,6 +12,59 @@
         .share-container {
             display: none !important;
         }
+
+        /* Styling for the new sections */
+        .info-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .example-questions {
+            background-color: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .example-questions h4 {
+            margin-top: 0;
+            color: #2980b9;
+        }
+
+        .example-questions ul {
+            margin-bottom: 0;
+        }
+
+        .example-questions li {
+            margin-bottom: 10px;
+        }
+
+        .example-questions button {
+            background: none;
+            border: none;
+            color: #3498db;
+            text-decoration: underline;
+            cursor: pointer;
+            padding: 0;
+            font: inherit;
+            text-align: left;
+        }
+
+        .example-questions button:hover {
+            color: #2980b9;
+        }
+
+        .under-the-hood {
+            margin-top: 30px;
+        }
+
+        .under-the-hood h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
     </style>
 </head>
 
@@ -47,6 +100,58 @@
                             <p>Receive a comprehensive answer and see how your question was broken down.</p>
                         </div>
                     </div>
+                </div>
+            </section>
+
+            <section class="info-section">
+                <div class="example-questions">
+                    <h4>Try These Example Questions</h4>
+                    <ul>
+                        <li><button class="example-question-btn">What are the economic and environmental impacts of
+                                renewable energy adoption globally?</button></li>
+                        <li><button class="example-question-btn">How has artificial intelligence influenced modern
+                                healthcare systems, and what ethical concerns have emerged?</button></li>
+                        <li><button class="example-question-btn">What are the psychological and sociological factors
+                                that contribute to the spread of misinformation on social media?</button></li>
+                        <li><button class="example-question-btn">How do different educational approaches affect
+                                childhood development and future career success?</button></li>
+                        <li><button class="example-question-btn">What are the most promising technologies for addressing
+                                climate change, and what are their limitations?</button></li>
+                    </ul>
+                </div>
+
+                <div class="under-the-hood">
+                    <h3>Under the Hood: How This Works</h3>
+                    <p>The Deep Research Assistant uses a sophisticated AI-powered approach to break down complex
+                        questions:</p>
+
+                    <ol>
+                        <li><strong>Question Analysis:</strong> When you submit a question, the system first analyzes
+                            its complexity to determine if it needs to be broken down.</li>
+                        <li><strong>Recursive Breakdown:</strong> Complex questions are intelligently divided into
+                            simpler sub-questions, which may be further broken down if needed (up to the maximum
+                            recursion depth you set).</li>
+                        <li><strong>Parallel Processing:</strong> The system processes multiple sub-questions
+                            simultaneously to provide faster results.</li>
+                        <li><strong>Individual Answers:</strong> Each leaf question (one that doesn't need further
+                            breakdown) receives its own detailed answer.</li>
+                        <li><strong>Answer Synthesis:</strong> All individual answers are combined into a comprehensive,
+                            well-structured response to your original question.</li>
+                        <li><strong>Visualization:</strong> The question tree visualization shows you exactly how your
+                            question was broken down and answered.</li>
+                    </ol>
+
+                    <p>The system uses Claude AI (via Anthropic's API) with carefully engineered prompts to ensure
+                        high-quality, accurate, and well-structured responses. The recursive approach allows for
+                        handling questions of virtually any complexity.</p>
+
+                    <p><strong>Advanced Parameters:</strong></p>
+                    <ul>
+                        <li><strong>Maximum Recursion Depth:</strong> Controls how many levels deep your question can be
+                            broken down. Higher values allow for more detailed analysis but take longer to process.</li>
+                        <li><strong>Maximum Sub-Questions:</strong> Limits how many sub-questions can be generated at
+                            each level. More sub-questions provide broader coverage but increase processing time.</li>
+                    </ul>
                 </div>
             </section>
 
@@ -155,6 +260,22 @@
 
     <script src="js/aws-config.js"></script>
     <script src="js/main.js"></script>
+    <script>
+        // Add functionality for example question buttons
+        document.addEventListener('DOMContentLoaded', function () {
+            const exampleButtons = document.querySelectorAll('.example-question-btn');
+            const questionTextarea = document.getElementById('research-question');
+
+            exampleButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    questionTextarea.value = this.textContent;
+                    questionTextarea.focus();
+                    // Scroll to the form
+                    document.querySelector('.research-form').scrollIntoView({ behavior: 'smooth' });
+                });
+            });
+        });
+    </script>
 </body>
 
 </html>
