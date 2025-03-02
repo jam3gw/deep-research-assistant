@@ -1,4 +1,13 @@
+"""
+Functions for visualizing the question tree.
+"""
 
+def generate_tree_visualization(question_tree):
+    """
+    Generate an interactive HTML visualization of the question tree
+    with collapsible nodes and detailed view on click
+    """
+    html = """
     <!DOCTYPE html>
     <html>
     <head>
@@ -168,173 +177,13 @@
         </div>
         
         <div class="tree-container">
+    """
     
-    <div class="node question-node" id="2eac961f-c970-49d3-9834-8ec2db21e981" data-depth="0">
-        <div class="node-header" onclick="toggleNode('2eac961f-c970-49d3-9834-8ec2db21e981')">
-            <span class="depth-indicator">Level 0</span>
-            <span class="node-title">Question: How has AI changed the job of software engineering?</span>
-            <span class="toggle-icon">+</span>
-        </div>
-        <div class="node-content">
-            <button onclick="showDetails('2eac961f-c970-49d3-9834-8ec2db21e981', true); event.stopPropagation();">View Details</button>
-            
-            
-            <div class="path-indicator"></div>
-        </div>
-    <div class="children">
-    <div class="node question-node" id="ccf745cd-5679-492f-9a0d-0105dca60e70" data-depth="1">
-        <div class="node-header" onclick="toggleNode('ccf745cd-5679-492f-9a0d-0105dca60e70')">
-            <span class="depth-indicator">Level 1</span>
-            <span class="node-title">Question: How has AI changed the day-to-day responsibilities and tasks of software engineers?</span>
-            <span class="toggle-icon">+</span>
-        </div>
-        <div class="node-content">
-            <button onclick="showDetails('ccf745cd-5679-492f-9a0d-0105dca60e70', true); event.stopPropagation();">View Details</button>
-            
-            
-            <div class="path-indicator"></div>
-        </div>
-    <div class="children">
-    <div class="node question-node max-depth-node" id="ff12b0eb-910e-4cfe-85e8-2fc6c3bbae2a" data-depth="2">
-        <div class="node-header" onclick="toggleNode('ff12b0eb-910e-4cfe-85e8-2fc6c3bbae2a')">
-            <span class="depth-indicator">Level 2</span>
-            <span class="node-title">Question: What specific day-to-day tasks and responsibilities have software engineers taken on due to the integration of AI systems?</span>
-            <span class="toggle-icon">+</span>
-        </div>
-        <div class="node-content">
-            <button onclick="showDetails('ff12b0eb-910e-4cfe-85e8-2fc6c3bbae2a', true); event.stopPropagation();">View Details</button>
-            <span class="max-depth-badge">Max Depth</span>
-            
-            <div class="path-indicator"></div>
-        </div>
+    # Add the tree structure
+    html += render_interactive_node_html(question_tree)
     
-        <div class="answer-node" id="answer-ff12b0eb-910e-4cfe-85e8-2fc6c3bbae2a">
-            <h3>Answer:</h3>
-            <div>Here is a concise summary of the key points related to the responsibilities software engineers have taken on due to the integration of AI systems:
-
-<h3>Responsibilities of Software Engineers with AI Integration</h3>
-
-<p>As AI systems have become more integrated into software applications, software engineers have taken on several new responsibilities:</p>
-
-<p><strong>Data Curation and Preprocessing:</strong> Engineers must ensure AI systems have access to high-quality, relevant data to train on. This involves tasks like data collection, cleaning, and feature engineering.</p>
-
-<p><strong>Model Development and Optimization:</strong> Engineers collaborate with data scientists to build, test, and refine AI models to meet application requirements. This includes selecting appropriate algorithms, tuning hyperparameters, and monitoring model performance.</p>
-
-<p><strong>AI System Integration:</strong> Engineers must integrate AI components seamlessly into existing software architectures, ensuring smooth data flow and optimal system performance.</p>
-
-<p><strong>Monitoring and Maintenance:</strong> Engineers monitor AI systems in production, troubleshoot issues, and maintain the infrastructure to ensure continued reliable operation.</p></div>
-            <button onclick="showDetails('answer-ff12b0eb-910e-4cfe-85e8-2fc6c3bbae2a', false); event.stopPropagation();">View Full Answer</button>
-        </div>
-        </div>
-    <div class="node question-node max-depth-node" id="6998a8d9-5ff3-4f8e-8ed1-36fcf2d30e73" data-depth="2">
-        <div class="node-header" onclick="toggleNode('6998a8d9-5ff3-4f8e-8ed1-36fcf2d30e73')">
-            <span class="depth-indicator">Level 2</span>
-            <span class="node-title">Question: How has the software development lifecycle changed for engineers as a result of incorporating AI into their work?</span>
-            <span class="toggle-icon">+</span>
-        </div>
-        <div class="node-content">
-            <button onclick="showDetails('6998a8d9-5ff3-4f8e-8ed1-36fcf2d30e73', true); event.stopPropagation();">View Details</button>
-            <span class="max-depth-badge">Max Depth</span>
-            
-            <div class="path-indicator"></div>
-        </div>
-    
-        <div class="answer-node" id="answer-6998a8d9-5ff3-4f8e-8ed1-36fcf2d30e73">
-            <h3>Answer:</h3>
-            <div>Here is a concise summary of how the software development lifecycle has changed for engineers as a result of incorporating AI:
-
-<h3>Incorporating AI into Software Development</h3>
-<p>The integration of AI into the software development lifecycle has introduced several key changes for engineers:</p>
-
-<p><strong>Increased Automation:</strong> AI-powered tools can automate various tasks such as code generation, testing, and deployment, streamlining the development process and reducing manual effort.</p>
-
-<p><strong>Improved Decision-Making:</strong> AI algorithms can analyze data and provide insights to help engineers make more informed decisions throughout the development lifecycle, from requirements gathering to deployment.</p>
-
-<p><strong>Enhanced Collaboration:</strong> AI-based assistants can facilitate collaboration among team members, providing real-time support and recommendations to improve productivity and efficiency.</p>
-
-<p><strong>Evolving Skillsets:</strong> Engineers must now develop new skills to work with AI-powered tools and incorporate AI-driven features into their applications, requiring continuous learning and adaptation.</p></div>
-            <button onclick="showDetails('answer-6998a8d9-5ff3-4f8e-8ed1-36fcf2d30e73', false); event.stopPropagation();">View Full Answer</button>
-        </div>
-        </div></div></div>
-    <div class="node question-node" id="87d216ac-0420-4662-b467-d5f694b3b45d" data-depth="1">
-        <div class="node-header" onclick="toggleNode('87d216ac-0420-4662-b467-d5f694b3b45d')">
-            <span class="depth-indicator">Level 1</span>
-            <span class="node-title">Question: What new AI-powered tools and technologies have been adopted by software engineering teams?</span>
-            <span class="toggle-icon">+</span>
-        </div>
-        <div class="node-content">
-            <button onclick="showDetails('87d216ac-0420-4662-b467-d5f694b3b45d', true); event.stopPropagation();">View Details</button>
-            
-            
-            <div class="path-indicator"></div>
-        </div>
-    <div class="children">
-    <div class="node question-node max-depth-node" id="3c425010-461c-47e0-8ded-a94139af4ef1" data-depth="2">
-        <div class="node-header" onclick="toggleNode('3c425010-461c-47e0-8ded-a94139af4ef1')">
-            <span class="depth-indicator">Level 2</span>
-            <span class="node-title">Question: What are the most common AI-powered tools and technologies being used by software engineering teams?</span>
-            <span class="toggle-icon">+</span>
-        </div>
-        <div class="node-content">
-            <button onclick="showDetails('3c425010-461c-47e0-8ded-a94139af4ef1', true); event.stopPropagation();">View Details</button>
-            <span class="max-depth-badge">Max Depth</span>
-            
-            <div class="path-indicator"></div>
-        </div>
-    
-        <div class="answer-node" id="answer-3c425010-461c-47e0-8ded-a94139af4ef1">
-            <h3>Answer:</h3>
-            <div>Here is a concise summary of the most common AI-powered tools and technologies used by software engineering teams:
-
-<h3>Key AI-Powered Tools and Technologies for Software Engineering</h3>
-
-<p>Software engineering teams are increasingly leveraging a variety of AI-powered tools and technologies to enhance their workflows and improve productivity:</p>
-
-<p><strong>Code Assistants:</strong> AI-powered code completion and generation tools that help engineers write code more efficiently.</p>
-
-<p><strong>Automated Testing:</strong> AI-driven tools that can automatically generate and run tests to identify bugs and issues in software.</p>
-
-<p><strong>Predictive Analytics:</strong> AI models that analyze software performance data to predict and prevent future issues or failures.</p>
-
-<p><strong>Conversational Interfaces:</strong> AI chatbots and virtual assistants that can provide support and answer questions for engineers.</p>
-
-<p><strong>Recommendation Systems:</strong> AI algorithms that suggest relevant code snippets, libraries, and other resources to help engineers make more informed decisions.</p></div>
-            <button onclick="showDetails('answer-3c425010-461c-47e0-8ded-a94139af4ef1', false); event.stopPropagation();">View Full Answer</button>
-        </div>
-        </div>
-    <div class="node question-node max-depth-node" id="579ab375-11ac-4571-9881-67e384e1e947" data-depth="2">
-        <div class="node-header" onclick="toggleNode('579ab375-11ac-4571-9881-67e384e1e947')">
-            <span class="depth-indicator">Level 2</span>
-            <span class="node-title">Question: How are software engineering teams integrating AI-powered tools and technologies into their development workflows?</span>
-            <span class="toggle-icon">+</span>
-        </div>
-        <div class="node-content">
-            <button onclick="showDetails('579ab375-11ac-4571-9881-67e384e1e947', true); event.stopPropagation();">View Details</button>
-            <span class="max-depth-badge">Max Depth</span>
-            
-            <div class="path-indicator"></div>
-        </div>
-    
-        <div class="answer-node" id="answer-579ab375-11ac-4571-9881-67e384e1e947">
-            <h3>Answer:</h3>
-            <div>Here is a concise summary of how software engineering teams are integrating AI-powered tools and technologies into their development workflows:
-
-<h3>Integrating AI into Software Development Workflows</h3>
-
-<p>Software engineering teams are increasingly leveraging AI-powered tools and technologies to enhance various aspects of their development workflows:</p>
-
-<p><strong>Automated Testing and Quality Assurance:</strong> AI-based testing tools can automate the identification of bugs, errors, and performance issues, improving software quality and reducing manual testing efforts.</p>
-
-<p><strong>Code Generation and Optimization:</strong> AI models can assist developers by automatically generating code snippets, suggesting optimizations, and even creating entire software components based on natural language descriptions.</p>
-
-<p><strong>Predictive Analytics and Insights:</strong> AI-powered analytics tools can provide valuable insights into project health, team productivity, and potential risks, enabling more informed decision-making.</p>
-
-<p><strong>Collaboration and Knowledge Management:</strong> AI-driven tools can enhance collaboration, knowledge sharing, and task coordination among distributed software teams.</p>
-
-<p>While the adoption of AI in software development is still evolving, these technologies are becoming increasingly integral to modern engineering workflows, driving efficiency, quality, and innovation.</p></div>
-            <button onclick="showDetails('answer-579ab375-11ac-4571-9881-67e384e1e947', false); event.stopPropagation();">View Full Answer</button>
-        </div>
-        </div></div></div></div></div>
+    # Add the detail view panel
+    html += """
         </div>
         
         <div class="detail-view" id="detailView">
@@ -474,4 +323,57 @@
         </script>
     </body>
     </html>
+    """
     
+    return html
+
+def render_interactive_node_html(node, path=""):
+    """
+    Render a single node of the question tree as interactive HTML
+    """
+    depth = node['depth']
+    node_id = node['id']
+    
+    # Add a special class if this node reached max depth or is vague
+    max_depth_class = " max-depth-node" if node.get('max_depth_reached', False) else ""
+    vague_class = " vague-node" if node.get('is_vague', False) else ""
+    
+    # Create the path for this node
+    current_path = path + (f" > {node['question'][:20]}..." if path else "")
+    
+    html = f"""
+    <div class="node question-node{max_depth_class}{vague_class}" id="{node_id}" data-depth="{depth}">
+        <div class="node-header" onclick="toggleNode('{node_id}')">
+            <span class="depth-indicator">Level {depth}</span>
+            <span class="node-title">Question: {node['question']}</span>
+            <span class="toggle-icon">+</span>
+        </div>
+        <div class="node-content">
+            <button onclick="showDetails('{node_id}', true); event.stopPropagation();">View Details</button>
+            {f'<span class="max-depth-badge">Max Depth</span>' if node.get('max_depth_reached', False) else ''}
+            {f'<span class="vague-badge">Vague Question</span>' if node.get('is_vague', False) else ''}
+            <div class="path-indicator">{current_path}</div>
+        </div>
+    """
+    
+    if node.get('needs_breakdown', False) and node.get('children'):
+        html += '<div class="children">'
+        for child in node['children']:
+            # Ensure child depth is correctly set relative to parent
+            if child['depth'] != depth + 1:
+                print(f"WARNING: Child depth {child['depth']} doesn't match expected {depth + 1}. Fixing...")
+                child['depth'] = depth + 1
+            html += render_interactive_node_html(child, current_path)
+        html += '</div>'
+    else:
+        answer_id = f"answer-{node_id}"
+        html += f"""
+        <div class="answer-node" id="{answer_id}">
+            <h3>Answer:</h3>
+            <div>{node.get('answer', 'No answer available')}</div>
+            <button onclick="showDetails('{answer_id}', false); event.stopPropagation();">View Full Answer</button>
+        </div>
+        """
+    
+    html += '</div>'
+    return html 

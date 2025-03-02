@@ -16,20 +16,22 @@ import uuid
 import argparse
 from anthropic import Anthropic
 
-# Import the functions from lambda_function.py
-from lambda_function import (
-    process_question_node,
-    should_break_down_question,
-    get_answer_for_question,
-    aggregate_answers,
-    generate_tree_visualization,
-    extract_content,
+# Import from the refactored modules
+from config import (
     MAX_ALLOWED_RECURSION_DEPTH,
     MAX_ALLOWED_SUB_QUESTIONS,
     DEFAULT_RECURSION_DEPTH,
     DEFAULT_SUB_QUESTIONS,
     DEFAULT_RECURSION_THRESHOLD
 )
+from question_processor import (
+    process_question_node,
+    should_break_down_question
+)
+from answer_generator import get_answer_for_question
+from answer_aggregator import aggregate_answers
+from tree_visualizer import generate_tree_visualization
+from utils import extract_content
 
 def main():
     # Parse command line arguments
