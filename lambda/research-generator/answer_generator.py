@@ -1,8 +1,33 @@
 """
 Functions for generating answers to questions.
 """
+import asyncio
 from utils import extract_content
 from config import DEFAULT_MODEL, DEFAULT_ANSWER_MAX_TOKENS, get_token_limit_for_depth
+
+async def get_answer_for_question_async(question, client, parent_question=None, depth=0, original_question=None):
+    """
+    Async version of get_answer_for_question
+    """
+    return await asyncio.to_thread(
+        get_answer_for_question, question, client, parent_question, depth, original_question
+    )
+
+async def get_concise_summary_for_broad_question_async(question, client, depth=0):
+    """
+    Async version of get_concise_summary_for_broad_question
+    """
+    return await asyncio.to_thread(
+        get_concise_summary_for_broad_question, question, client, depth
+    )
+
+async def get_vanilla_response_for_vague_question_async(question, client, depth=0):
+    """
+    Async version of get_vanilla_response_for_vague_question
+    """
+    return await asyncio.to_thread(
+        get_vanilla_response_for_vague_question, question, client, depth
+    )
 
 def get_answer_for_question(question, client, parent_question=None, depth=0, original_question=None):
     """

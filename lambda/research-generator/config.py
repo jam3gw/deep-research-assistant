@@ -13,9 +13,9 @@ DEFAULT_RECURSION_THRESHOLD = 1
 
 # Model configuration
 DEFAULT_MODEL = "claude-3-haiku-20240307"  # Fastest Claude model
-DEFAULT_SYNTHESIS_MAX_TOKENS = 1500  # Reduced from 2000
-DEFAULT_ANSWER_MAX_TOKENS = 800  # Reduced from 1000
-DEFAULT_EVALUATION_MAX_TOKENS = 600  # Reduced from 1000
+DEFAULT_SYNTHESIS_MAX_TOKENS = 1000  # Reduced from 1500
+DEFAULT_ANSWER_MAX_TOKENS = 500  # Reduced from 800
+DEFAULT_EVALUATION_MAX_TOKENS = 400  # Reduced from 600
 
 def get_token_limit_for_depth(base_limit, depth):
     """

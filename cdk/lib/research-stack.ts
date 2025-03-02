@@ -31,7 +31,7 @@ export class ResearchStack extends cdk.Stack {
             handler: 'lambda_handler',
             timeout: cdk.Duration.minutes(5),
             runtime: lambda.Runtime.PYTHON_3_9,
-            memorySize: 512,
+            memorySize: 2048,
             environment: {
                 ANTHROPIC_API_KEY_SECRET_NAME: anthropicApiParam.parameterName,
                 ENVIRONMENT: props.environmentName,

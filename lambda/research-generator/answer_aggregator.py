@@ -1,8 +1,15 @@
 """
 Functions for aggregating answers from the question tree.
 """
+import asyncio
 from utils import extract_content
 from config import DEFAULT_MODEL, DEFAULT_SYNTHESIS_MAX_TOKENS
+
+async def aggregate_answers_async(question_tree, client):
+    """
+    Async version of aggregate_answers
+    """
+    return await asyncio.to_thread(aggregate_answers, question_tree, client)
 
 def aggregate_answers(question_tree, client):
     """

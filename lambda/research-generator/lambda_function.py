@@ -5,6 +5,7 @@ import json
 import boto3
 import os
 import uuid
+import asyncio
 from anthropic import Anthropic
 
 # Import modules
@@ -14,7 +15,7 @@ from config import (
 )
 from utils import build_response
 from question_processor import process_question_node
-from answer_aggregator import aggregate_answers
+from answer_aggregator import aggregate_answers, aggregate_answers_async
 from tree_visualizer import generate_tree_visualization
 
 def lambda_handler(event, context):
@@ -93,6 +94,7 @@ def lambda_handler(event, context):
             }
             
             # Process the question tree recursively with user-specified parameters
+            # The process_question_node function now handles setting up the event loop internally
             process_question_node(
                 question_tree, 
                 client, 
@@ -102,7 +104,13 @@ def lambda_handler(event, context):
             )
             
             # Generate the final aggregated answer
-            final_answer = aggregate_answers(question_tree, client)
+            # Create a new event loop for the aggregation step
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                final_answer = loop.run_until_complete(aggregate_answers_async(question_tree, client))
+            finally:
+                loop.close()
             
             # Generate a visualization of the thought tree
             tree_visualization = generate_tree_visualization(question_tree)

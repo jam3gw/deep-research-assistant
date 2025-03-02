@@ -3,6 +3,8 @@ Functions for processing questions and building the question tree.
 """
 import json
 import uuid
+import asyncio
+import concurrent.futures
 from utils import extract_content
 from config import (
     DEFAULT_MODEL, DEFAULT_EVALUATION_MAX_TOKENS, DEFAULT_ANSWER_MAX_TOKENS,
@@ -12,17 +14,39 @@ from config import (
 from answer_generator import (
     get_answer_for_question, 
     get_concise_summary_for_broad_question,
-    get_vanilla_response_for_vague_question
+    get_vanilla_response_for_vague_question,
+    get_answer_for_question_async,
+    get_concise_summary_for_broad_question_async,
+    get_vanilla_response_for_vague_question_async
 )
 
+# Main entry point that will be called by the Lambda handler
 def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DEPTH, 
                          max_sub_questions=DEFAULT_SUB_QUESTIONS, recursion_threshold=DEFAULT_RECURSION_THRESHOLD,
                          original_question=None):
     """
-    Recursively process a question node:
-    1. Determine if the question needs to be broken down
-    2. If yes, break it down and process each sub-question
-    3. If no, get the answer for this question
+    Entry point for processing a question node. This function sets up the event loop
+    and calls the async version of the processing function.
+    """
+    # Create a new event loop
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    try:
+        # Run the async function in the event loop
+        return loop.run_until_complete(
+            process_question_node_async(node, client, max_recursion_depth, 
+                                      max_sub_questions, recursion_threshold, original_question)
+        )
+    finally:
+        # Clean up the event loop
+        loop.close()
+
+async def process_question_node_async(node, client, max_recursion_depth=DEFAULT_RECURSION_DEPTH, 
+                                    max_sub_questions=DEFAULT_SUB_QUESTIONS, recursion_threshold=DEFAULT_RECURSION_THRESHOLD,
+                                    original_question=None):
+    """
+    Async version of process_question_node that processes sub-questions in parallel.
     """
     depth = node['depth']
     question = node['question']
@@ -38,7 +62,7 @@ def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DE
         print(f"WARNING: Maximum recursion depth ({max_recursion_depth}) reached for question: {question}")
         
         # Instead of error message, get a concise summary
-        node['answer'] = get_concise_summary_for_broad_question(question, client, depth)
+        node['answer'] = await get_concise_summary_for_broad_question_async(question, client, depth)
         node['needs_breakdown'] = False
         node['max_depth_reached'] = True
         return
@@ -49,7 +73,9 @@ def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DE
         print(f"At depth {depth}, being more conservative about breaking down: {question}")
     
     # Determine if the question needs to be broken down
-    needs_breakdown, sub_questions = should_break_down_question(question, client, recursion_threshold, max_sub_questions, depth)
+    needs_breakdown, sub_questions = await asyncio.to_thread(
+        should_break_down_question, question, client, recursion_threshold, max_sub_questions, depth
+    )
     
     # Additional check: if we're at depth > 0 and have no sub-questions or only one, don't break down
     if needs_breakdown and depth > 0 and (not sub_questions or len(sub_questions) <= 1):
@@ -58,7 +84,9 @@ def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DE
     
     # Validate that sub-questions are actually simpler than the parent question and stay on topic
     if needs_breakdown and depth > 0 and sub_questions:
-        validated_sub_questions = validate_sub_questions_simplicity(question, sub_questions, client, depth)
+        validated_sub_questions = await asyncio.to_thread(
+            validate_sub_questions_simplicity, question, sub_questions, client, depth
+        )
         if not validated_sub_questions:
             print(f"Overriding breakdown decision at depth {depth} because sub-questions were not valid (not simpler or off-topic)")
             needs_breakdown = False
@@ -67,7 +95,9 @@ def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DE
     
     # Additional check: ensure sub-questions are relevant to the original question
     if needs_breakdown and depth > 0 and sub_questions:
-        relevant_sub_questions = validate_sub_questions_relevance(original_question, sub_questions, client)
+        relevant_sub_questions = await asyncio.to_thread(
+            validate_sub_questions_relevance, original_question, sub_questions, client
+        )
         if not relevant_sub_questions:
             print(f"Overriding breakdown decision at depth {depth} because sub-questions were not relevant to the original question")
             needs_breakdown = False
@@ -78,8 +108,11 @@ def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DE
     
     if needs_breakdown:
         print(f"Breaking down question into {len(sub_questions)} sub-questions")
-        # Process each sub-question recursively
+        # Process each sub-question recursively in parallel
         node['children'] = []  # Ensure children is initialized as an empty list
+        
+        # Create sub-nodes first
+        sub_nodes = []
         for sub_q in sub_questions:
             sub_node = {
                 'id': str(uuid.uuid4()),
@@ -90,12 +123,28 @@ def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DE
                 'original_question': original_question  # Store the original question for context
             }
             node['children'].append(sub_node)
-            process_question_node(sub_node, client, max_recursion_depth, max_sub_questions, recursion_threshold, original_question)
+            sub_nodes.append(sub_node)
+        
+        # Process all sub-nodes in parallel
+        tasks = []
+        for sub_node in sub_nodes:
+            task = asyncio.create_task(
+                process_question_node_async(
+                    sub_node, client, max_recursion_depth, 
+                    max_sub_questions, recursion_threshold, original_question
+                )
+            )
+            tasks.append(task)
+        
+        # Wait for all tasks to complete
+        await asyncio.gather(*tasks)
     else:
         # This is a leaf node, check if it's too vague
-        if is_question_too_vague(question, client):
+        is_vague = await asyncio.to_thread(is_question_too_vague, question, client)
+        
+        if is_vague:
             print(f"Question is too vague, providing vanilla response: {question}")
-            node['answer'] = get_vanilla_response_for_vague_question(question, client, depth)
+            node['answer'] = await get_vanilla_response_for_vague_question_async(question, client, depth)
             node['is_vague'] = True
         else:
             # Get a detailed answer for a specific question
@@ -103,7 +152,7 @@ def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DE
             # Pass parent context if available
             parent_question = node.get('parent_question', None)
             # Also pass the original question for broader context
-            node['answer'] = get_answer_for_question(question, client, parent_question, depth, original_question)
+            node['answer'] = await get_answer_for_question_async(question, client, parent_question, depth, original_question)
 
 def validate_sub_questions_simplicity(parent_question, sub_questions, client, depth):
     """
