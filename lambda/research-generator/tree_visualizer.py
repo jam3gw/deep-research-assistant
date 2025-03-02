@@ -36,7 +36,7 @@ def generate_tree_visualization(question_tree):
                 background-color: #fff7e6;
                 border-left: 4px solid #fa8c16;
             }
-            .vague-node {
+            .broad-topic-node {
                 background-color: #f9f0ff;
                 border-left: 4px solid #722ed1;
             }
@@ -100,7 +100,7 @@ def generate_tree_visualization(question_tree):
                 border-radius: 10px;
                 margin-left: 10px;
             }
-            .vague-badge {
+            .broad-topic-badge {
                 display: inline-block;
                 background-color: #722ed1;
                 color: white;
@@ -336,13 +336,13 @@ def render_interactive_node_html(node, path=""):
     
     # Add a special class if this node reached max depth or is vague
     max_depth_class = " max-depth-node" if node.get('max_depth_reached', False) else ""
-    vague_class = " vague-node" if node.get('is_vague', False) else ""
+    broad_topic_class = " broad-topic-node" if node.get('is_vague', False) else ""
     
     # Create the path for this node
     current_path = path + (f" > {node['question'][:20]}..." if path else "")
     
     html = f"""
-    <div class="node question-node{max_depth_class}{vague_class}" id="{node_id}" data-depth="{depth}">
+    <div class="node question-node{max_depth_class}{broad_topic_class}" id="{node_id}" data-depth="{depth}">
         <div class="node-header" onclick="toggleNode('{node_id}')">
             <span class="depth-indicator">Level {depth}</span>
             <span class="node-title">Question: {node['question']}</span>
@@ -351,7 +351,7 @@ def render_interactive_node_html(node, path=""):
         <div class="node-content">
             <button onclick="showDetails('{node_id}', true); event.stopPropagation();">View Details</button>
             {f'<span class="max-depth-badge">Max Depth</span>' if node.get('max_depth_reached', False) else ''}
-            {f'<span class="vague-badge">Vague Question</span>' if node.get('is_vague', False) else ''}
+            {f'<span class="broad-topic-badge">Broad Topic</span>' if node.get('is_vague', False) else ''}
             <div class="path-indicator">{current_path}</div>
         </div>
     """

@@ -21,7 +21,7 @@ def aggregate_answers(question_tree, client):
     special_notes = ""
     if has_vague_questions:
         special_notes += """
-Note: Some questions in this research were identified as too vague.
+Note: Some questions in this research were addressed with broader topic responses due to their scope.
 """
     
     prompt = f"""You are a research assistant tasked with synthesizing information from multiple sources.
@@ -56,7 +56,7 @@ Be concise and direct while ensuring all key points are covered.
     disclaimers = ""
     if has_vague_questions:
         disclaimers += """<div class="note" style="background-color: #e6f7ff; border-left: 4px solid #1890ff; padding: 15px; margin-bottom: 20px;">
-        <strong>Note:</strong> Some questions were identified as too vague.
+        <strong>Note:</strong> Some topics include broader responses due to their wide scope.
         </div>"""
     
     if disclaimers:

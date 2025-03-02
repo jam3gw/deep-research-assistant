@@ -91,20 +91,21 @@ def get_concise_summary_for_broad_question(question, client, depth=0):
 
 def get_vanilla_response_for_vague_question(question, client, depth=0):
     """
-    Provide a vanilla response for questions that are too vague.
+    Provide a response for questions that have a broad scope.
     """
     # Adjust token limit based on depth
     token_limit = get_token_limit_for_depth(DEFAULT_ANSWER_MAX_TOKENS, depth)
     
     prompt = f"""You are a research assistant.
     
-    The following question is too vague to provide a detailed, specific answer:
+    The following question has a broad scope that would benefit from a high-level overview:
     
     {question}
     
     Please provide a response that:
     1. Provides general information about the topic
     2. Focuses on the most common aspects or interpretations
+    3. Gives a balanced overview of the main considerations
     
     Format your response with HTML tags for better readability.
     """
@@ -113,7 +114,7 @@ def get_vanilla_response_for_vague_question(question, client, depth=0):
         model=DEFAULT_MODEL,
         max_tokens=token_limit,
         temperature=0.5,
-        system="You are a helpful research assistant that provides guidance on vague questions. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <strong> for emphasis.",
+        system="You are a helpful research assistant that provides informative overviews for broad topics. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <strong> for emphasis.",
         messages=[
             {"role": "user", "content": prompt}
         ]
@@ -123,7 +124,7 @@ def get_vanilla_response_for_vague_question(question, client, depth=0):
     
     # Add a simple disclaimer at the beginning
     disclaimer = """<div class="note" style="background-color: #e6f7ff; border-left: 4px solid #1890ff; padding: 15px; margin-bottom: 20px;">
-    <strong>Vague Question</strong>
+    <strong>Broad Topic Response</strong>
     </div>"""
     
     return disclaimer + content 
