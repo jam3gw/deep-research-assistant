@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const recursionDepthValue = document.getElementById('recursion-depth-value');
     const subQuestions = document.getElementById('sub-questions');
     const subQuestionsValue = document.getElementById('sub-questions-value');
-    const recursionThreshold = document.getElementById('recursion-threshold');
     const toggleParameters = document.getElementById('toggle-parameters');
     const parametersContainer = document.getElementById('parameters-container');
     const submitButton = document.getElementById('submit-button');
@@ -148,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function () {
             expression: researchQuestion.value.trim(),
             max_recursion_depth: parseInt(recursionDepth.value),
             max_sub_questions: parseInt(subQuestions.value),
-            recursion_threshold: parseInt(recursionThreshold.value)
+            recursion_threshold: 1 // Default to Conservative (1)
         };
 
         // Invoke Lambda directly via Function URL
