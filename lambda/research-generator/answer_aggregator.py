@@ -43,7 +43,7 @@ Be concise and direct while ensuring all key points are covered.
     message = client.messages.create(
         model=DEFAULT_MODEL,
         max_tokens=DEFAULT_SYNTHESIS_MAX_TOKENS,
-        temperature=0.5,
+        temperature=0.0,
         system="You are a helpful research assistant that synthesizes information from multiple sources. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <ol> and <li> for numbered steps, <strong> for emphasis, and <hr> for section dividers. Be concise and direct in your explanations.",
         messages=[
             {"role": "user", "content": prompt}

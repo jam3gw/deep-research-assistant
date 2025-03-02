@@ -148,7 +148,7 @@ Your response should be in JSON format:
     message = client.messages.create(
         model=DEFAULT_MODEL,
         max_tokens=DEFAULT_EVALUATION_MAX_TOKENS,
-        temperature=0.1,  # Low temperature for consistent evaluation
+        temperature=0.0,  # Zero temperature for maximum consistency
         system="You are a helpful research assistant that evaluates the quality of sub-questions. Always respond in valid JSON format. Be strict about ensuring sub-questions are both simpler AND stay on topic.",
         messages=[
             {"role": "user", "content": prompt}
@@ -210,6 +210,12 @@ DO NOT create sub-questions that:
 - Require their own complex breakdown
 - Are vague or general in nature
 """
+    else:
+        # At depth 0 (root question), be more aggressive about breaking down
+        simplification_guidance = """
+ROOT QUESTION GUIDANCE: This is the original user question. For root questions, breaking down is STRONGLY PREFERRED unless the question is already very specific.
+For broad questions at the root level, almost always break them down into more manageable sub-questions.
+"""
 
     # Add topic focus guidance to ensure sub-questions stay on topic
     topic_focus_guidance = """
@@ -223,26 +229,32 @@ Each sub-question should:
 The goal is to break down the question into more manageable parts while ensuring all parts remain focused on answering the original question.
 """
 
-    # Make the default guidance moderately conservative
+    # Make the guidance less conservative for broad questions
     conservative_guidance = """
-IMPORTANT: Be selective about breaking down questions. The preference is to NOT break down a question unless it clearly benefits from decomposition.
-Only break down a question if these criteria are met:
-1. The question covers multiple distinct topics or aspects that would benefit from separate analysis
+IMPORTANT: For broad, multi-faceted questions, breaking them down is STRONGLY PREFERRED.
+Break down a question if ANY of these criteria are met:
+1. The question covers multiple distinct topics or aspects
 2. The question is broad enough that a direct answer would be superficial
 3. Breaking it down would lead to more precise and valuable answers
 4. The question would be better answered by exploring its components separately
 
-If you're uncertain whether a question needs to be broken down, lean toward NOT breaking it down.
+SPECIAL CASES THAT SHOULD ALMOST ALWAYS BE BROKEN DOWN:
+- Questions about "impacts" or "effects" (e.g., "How has X impacted Y?")
+- Questions about trends or developments over time
+- Questions involving comparisons between multiple things
+- Questions about advantages/disadvantages or pros/cons
+- Questions about historical developments or evolution of topics
+
+For these special cases, assume breakdown is needed unless there's a compelling reason not to.
 """
 
     if recursion_threshold >= 1:
         conservative_guidance += """
-MORE IMPORTANT: Be more conservative about breaking down questions. The preference is to NOT break down questions unless clearly necessary.
-Only break down questions that are broad and complex, covering multiple distinct aspects that require separate exploration.
+For questions at deeper levels, be more selective about further breakdown, but still favor breaking down broad questions.
 """
     if recursion_threshold >= 2:
         conservative_guidance += """
-VERY IMPORTANT: Be very conservative about breaking down questions. Only the most complex, multi-faceted questions should be considered for breakdown.
+At the deepest levels, only break down questions if absolutely necessary for comprehensive understanding.
 """
 
     prompt = f"""You are a research assistant tasked with breaking down complex questions into simpler sub-questions.
@@ -265,13 +277,16 @@ Your response should be in JSON format:
 If needs_breakdown is false, sub_questions can be an empty array.
 """
 
-    # Moderate temperature for balanced behavior
-    temperature = 0.15
+    # Set temperature to 0 for maximum consistency
+    temperature = 0.0
     
     system_message = "You are a research assistant that breaks down complex questions into simpler sub-questions when appropriate."
-    system_message += " Be selective about breaking down questions - prefer not to break down a question unless it clearly benefits from decomposition."
+    system_message += " For broad questions covering multiple aspects, STRONGLY prefer to break them down into more specific sub-questions."
+    system_message += " Questions about impacts, trends, comparisons, or historical developments should almost always be broken down."
     if depth > 0:
         system_message += f" At depth {depth}, you MUST ensure that sub-questions are SIGNIFICANTLY SIMPLER than their parent question."
+    else:
+        system_message += " For root questions (depth 0), be very aggressive about breaking them down unless they are already very specific."
     system_message += " Always respond in valid JSON format."
     system_message += " Ensure all sub-questions remain directly focused on the original topic and don't introduce tangential subjects."
 
@@ -303,13 +318,14 @@ If needs_breakdown is false, sub_questions can be an empty array.
             # Apply additional threshold-based filtering
             needs_breakdown = result.get('needs_breakdown', False)
             
-            # Moderate chance of rejecting breakdown decisions
-            if needs_breakdown:
-                import random
-                # 40% chance to override to false - more balanced approach
-                if random.random() < 0.4:
-                    print("Moderate mode: Overriding breakdown decision to false")
-                    needs_breakdown = False
+            # Remove the random factor that could override breakdown decisions
+            # Commented out to ensure consistency
+            # if needs_breakdown:
+            #     import random
+            #     # 40% chance to override to false - more balanced approach
+            #     if random.random() < 0.4:
+            #         print("Moderate mode: Overriding breakdown decision to false")
+            #         needs_breakdown = False
             
             # Ensure we don't exceed the maximum number of sub-questions
             if needs_breakdown:
@@ -318,10 +334,20 @@ If needs_breakdown is false, sub_questions can be an empty array.
                     sub_questions = sub_questions[:max_sub_questions]
                 
                 # Additional filter: if we have fewer than 2 sub-questions, don't break down
+                # But make an exception for questions about impacts, trends, etc.
                 if len(sub_questions) < 2:
-                    print("Not enough sub-questions generated, overriding breakdown decision to false")
-                    needs_breakdown = False
-                    return False, []
+                    # Check if this is a special case question that should be broken down even with just one sub-question
+                    impact_keywords = ["impact", "effect", "influence", "change", "transform", "revolution"]
+                    is_impact_question = any(keyword in question.lower() for keyword in impact_keywords)
+                    
+                    if is_impact_question and len(sub_questions) == 1:
+                        # For impact questions, allow even a single good sub-question
+                        print("Impact-related question with one sub-question, allowing breakdown")
+                        return True, sub_questions
+                    else:
+                        print("Not enough sub-questions generated, overriding breakdown decision to false")
+                        needs_breakdown = False
+                        return False, []
                 
                 return needs_breakdown, sub_questions
             return False, []
@@ -370,7 +396,7 @@ Your response should be in JSON format:
     message = client.messages.create(
         model=DEFAULT_MODEL,
         max_tokens=DEFAULT_EVALUATION_MAX_TOKENS,
-        temperature=0.1,  # Low temperature for consistent evaluation
+        temperature=0.0,  # Zero temperature for maximum consistency
         system="You are a helpful research assistant that evaluates the relevance of sub-questions to the original research question. Always respond in valid JSON format. Be strict about ensuring sub-questions are directly relevant to the original question.",
         messages=[
             {"role": "user", "content": prompt}
@@ -433,7 +459,7 @@ Your response should be in JSON format:
     message = client.messages.create(
         model="claude-3-haiku-20240307",
         max_tokens=500,
-        temperature=0.2,
+        temperature=0.0,  # Zero temperature for maximum consistency
         system="You are a helpful research assistant that evaluates the specificity of questions. Always respond in valid JSON format.",
         messages=[
             {"role": "user", "content": prompt}

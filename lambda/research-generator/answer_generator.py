@@ -48,7 +48,7 @@ Ensure your answer contributes to understanding this original research question.
     message = client.messages.create(
         model=DEFAULT_MODEL,
         max_tokens=token_limit,
-        temperature=0.5,
+        temperature=0.0,
         system="You are a helpful and friendly research assistant that explains complex concepts in simple terms. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <ol> and <li> for numbered steps, <strong> for emphasis, and <hr> for section dividers. Be concise and direct.",
         messages=[
             {"role": "user", "content": prompt}
@@ -80,7 +80,7 @@ def get_concise_summary_for_broad_question(question, client, depth=0):
     message = client.messages.create(
         model=DEFAULT_MODEL,
         max_tokens=token_limit,
-        temperature=0.5,
+        temperature=0.0,
         system="You are a helpful research assistant that provides concise summaries of broad topics. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <strong> for emphasis.",
         messages=[
             {"role": "user", "content": prompt}
@@ -113,7 +113,7 @@ def get_vanilla_response_for_vague_question(question, client, depth=0):
     message = client.messages.create(
         model=DEFAULT_MODEL,
         max_tokens=token_limit,
-        temperature=0.5,
+        temperature=0.0,
         system="You are a helpful research assistant that provides informative overviews for broad topics. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <strong> for emphasis.",
         messages=[
             {"role": "user", "content": prompt}
