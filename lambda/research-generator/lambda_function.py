@@ -12,6 +12,26 @@ DEFAULT_RECURSION_DEPTH = 2
 DEFAULT_SUB_QUESTIONS = 3
 DEFAULT_RECURSION_THRESHOLD = 1
 
+# Model configuration
+DEFAULT_MODEL = "claude-3-haiku-20240307"  # Fastest Claude model
+DEFAULT_SYNTHESIS_MAX_TOKENS = 1500  # Reduced from 2000
+DEFAULT_ANSWER_MAX_TOKENS = 800  # Reduced from 1000
+DEFAULT_EVALUATION_MAX_TOKENS = 600  # Reduced from 1000
+
+# Token reduction factors based on depth
+def get_token_limit_for_depth(base_limit, depth):
+    """
+    Calculate token limit based on depth - deeper nodes get fewer tokens
+    """
+    if depth == 0:
+        return base_limit
+    elif depth == 1:
+        return int(base_limit * 0.75)  # 75% of base limit
+    elif depth == 2:
+        return int(base_limit * 0.5)   # 50% of base limit
+    else:
+        return int(base_limit * 0.25)   # 25% of base limit for depth 3+
+
 def lambda_handler(event, context):
     # Check if this is a Lambda Function URL invocation (it will have 'requestContext.http' in the event)
     is_function_url = 'requestContext' in event and 'http' in event.get('requestContext', {})
@@ -137,7 +157,8 @@ def lambda_handler(event, context):
         return build_response(500, {'error': f'Internal server error: {str(e)}'}, not is_function_url)
 
 def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DEPTH, 
-                         max_sub_questions=DEFAULT_SUB_QUESTIONS, recursion_threshold=DEFAULT_RECURSION_THRESHOLD):
+                         max_sub_questions=DEFAULT_SUB_QUESTIONS, recursion_threshold=DEFAULT_RECURSION_THRESHOLD,
+                         original_question=None):
     """
     Recursively process a question node:
     1. Determine if the question needs to be broken down
@@ -147,6 +168,10 @@ def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DE
     depth = node['depth']
     question = node['question']
     
+    # Track the original question for context
+    if original_question is None:
+        original_question = question  # The root question is the original question
+    
     print(f"Processing question at depth {depth}: {question}")
     
     # Check if we've reached the maximum recursion depth
@@ -154,7 +179,7 @@ def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DE
         print(f"WARNING: Maximum recursion depth ({max_recursion_depth}) reached for question: {question}")
         
         # Instead of error message, get a concise summary
-        node['answer'] = get_concise_summary_for_broad_question(question, client)
+        node['answer'] = get_concise_summary_for_broad_question(question, client, depth)
         node['needs_breakdown'] = False
         node['max_depth_reached'] = True
         return
@@ -172,39 +197,54 @@ def process_question_node(node, client, max_recursion_depth=DEFAULT_RECURSION_DE
         print(f"Overriding breakdown decision at depth {depth} because only {len(sub_questions)} sub-questions were generated")
         needs_breakdown = False
     
-    # Validate that sub-questions are actually simpler than the parent question
+    # Validate that sub-questions are actually simpler than the parent question and stay on topic
     if needs_breakdown and depth > 0 and sub_questions:
         validated_sub_questions = validate_sub_questions_simplicity(question, sub_questions, client, depth)
         if not validated_sub_questions:
-            print(f"Overriding breakdown decision at depth {depth} because sub-questions were not simpler than parent")
+            print(f"Overriding breakdown decision at depth {depth} because sub-questions were not valid (not simpler or off-topic)")
             needs_breakdown = False
         else:
             sub_questions = validated_sub_questions
+    
+    # Additional check: ensure sub-questions are relevant to the original question
+    if needs_breakdown and depth > 0 and sub_questions:
+        relevant_sub_questions = validate_sub_questions_relevance(original_question, sub_questions, client)
+        if not relevant_sub_questions:
+            print(f"Overriding breakdown decision at depth {depth} because sub-questions were not relevant to the original question")
+            needs_breakdown = False
+        else:
+            sub_questions = relevant_sub_questions
     
     node['needs_breakdown'] = needs_breakdown
     
     if needs_breakdown:
         print(f"Breaking down question into {len(sub_questions)} sub-questions")
         # Process each sub-question recursively
+        node['children'] = []  # Ensure children is initialized as an empty list
         for sub_q in sub_questions:
             sub_node = {
                 'id': str(uuid.uuid4()),
                 'question': sub_q,
-                'depth': depth + 1,
-                'children': []
+                'depth': depth + 1,  # Explicitly set depth as parent depth + 1
+                'children': [],
+                'parent_question': question,  # Store the parent question for context
+                'original_question': original_question  # Store the original question for context
             }
             node['children'].append(sub_node)
-            process_question_node(sub_node, client, max_recursion_depth, max_sub_questions, recursion_threshold)
+            process_question_node(sub_node, client, max_recursion_depth, max_sub_questions, recursion_threshold, original_question)
     else:
         # This is a leaf node, check if it's too vague
         if is_question_too_vague(question, client):
             print(f"Question is too vague, providing vanilla response: {question}")
-            node['answer'] = get_vanilla_response_for_vague_question(question, client)
+            node['answer'] = get_vanilla_response_for_vague_question(question, client, depth)
             node['is_vague'] = True
         else:
             # Get a detailed answer for a specific question
             print(f"Getting answer for leaf question: {question}")
-            node['answer'] = get_answer_for_question(question, client)
+            # Pass parent context if available
+            parent_question = node.get('parent_question', None)
+            # Also pass the original question for broader context
+            node['answer'] = get_answer_for_question(question, client, parent_question, depth, original_question)
 
 def validate_sub_questions_simplicity(parent_question, sub_questions, client, depth):
     """
@@ -214,26 +254,32 @@ def validate_sub_questions_simplicity(parent_question, sub_questions, client, de
     if depth == 0 or not sub_questions:
         return sub_questions  # At depth 0, no simplification check needed
     
-    prompt = f"""You are a research assistant tasked with evaluating whether sub-questions are simpler than their parent question.
+    prompt = f"""You are a research assistant tasked with evaluating whether sub-questions are simpler than their parent question and stay on topic.
 
 Parent question: {parent_question}
 
 Sub-questions:
 {json.dumps(sub_questions, indent=2)}
 
-For each sub-question, determine if it is GENUINELY SIMPLER than the parent question. A simpler question:
-1. Is more specific and narrower in scope
-2. Focuses on a single, well-defined aspect of the parent question
-3. Is answerable with less complexity
-4. Does not introduce new complexity or broaden the scope
+For each sub-question, determine if it meets BOTH of these criteria:
+1. It is GENUINELY SIMPLER than the parent question (more specific, narrower scope, less complex)
+2. It STAYS ON TOPIC and is directly relevant to the parent question (not tangential or introducing unrelated topics)
+
+A good sub-question:
+- Is more specific and narrower in scope
+- Focuses on a single, well-defined aspect of the parent question
+- Is answerable with less complexity
+- Does not introduce new complexity or broaden the scope
+- Remains directly relevant to the parent question
+- Does not deviate into tangential topics
 
 Your response should be in JSON format:
 {{
   "evaluations": [
     {{
       "sub_question": "sub-question 1",
-      "is_simpler": true/false,
-      "reasoning": "Brief explanation"
+      "is_valid": true/false,
+      "reasoning": "Brief explanation focusing on simplicity and topic relevance"
     }},
     ...
   ]
@@ -241,10 +287,10 @@ Your response should be in JSON format:
 """
 
     message = client.messages.create(
-        model="claude-3-haiku-20240307",
-        max_tokens=1000,
+        model=DEFAULT_MODEL,
+        max_tokens=DEFAULT_EVALUATION_MAX_TOKENS,
         temperature=0.1,  # Low temperature for consistent evaluation
-        system="You are a helpful research assistant that evaluates the simplicity of questions. Always respond in valid JSON format.",
+        system="You are a helpful research assistant that evaluates the quality of sub-questions. Always respond in valid JSON format. Be strict about ensuring sub-questions are both simpler AND stay on topic.",
         messages=[
             {"role": "user", "content": prompt}
         ]
@@ -261,16 +307,16 @@ Your response should be in JSON format:
             json_str = content[json_start:json_end]
             result = json.loads(json_str)
             
-            # Filter sub-questions to only include those that are simpler
-            simpler_sub_questions = []
+            # Filter sub-questions to only include those that are simpler and on topic
+            valid_sub_questions = []
             for eval_item in result.get('evaluations', []):
-                if eval_item.get('is_simpler', False):
-                    simpler_sub_questions.append(eval_item.get('sub_question'))
+                if eval_item.get('is_valid', False):
+                    valid_sub_questions.append(eval_item.get('sub_question'))
                 else:
-                    print(f"Removing complex sub-question: {eval_item.get('sub_question')}")
+                    print(f"Removing invalid sub-question: {eval_item.get('sub_question')}")
                     print(f"Reasoning: {eval_item.get('reasoning')}")
             
-            return simpler_sub_questions
+            return valid_sub_questions
         else:
             print(f"Could not find JSON in response: {content}")
             return []
@@ -287,6 +333,7 @@ def should_break_down_question(question, client, recursion_threshold=DEFAULT_REC
     # Adjust the prompt based on the recursion threshold and depth
     conservative_guidance = ""
     simplification_guidance = ""
+    topic_focus_guidance = ""
     
     # Add depth-based guidance to ensure questions get simpler
     if depth > 0:
@@ -303,6 +350,18 @@ DO NOT create sub-questions that:
 - Introduce new topics not directly related to the parent question
 - Require their own complex breakdown
 - Are vague or general in nature
+"""
+
+    # Add topic focus guidance to ensure sub-questions stay on topic
+    topic_focus_guidance = """
+EXTREMELY IMPORTANT: All sub-questions MUST be directly related to the original question and should not deviate from the main topic.
+Each sub-question should:
+1. Explore a specific aspect of the ORIGINAL question
+2. Maintain clear relevance to the main topic
+3. Not introduce tangential or only loosely related topics
+4. Together with other sub-questions, comprehensively cover the original question.
+
+The goal is to break down the question into more manageable parts while ensuring all parts remain focused on answering the original question.
 """
 
     if recursion_threshold >= 1:
@@ -323,6 +382,7 @@ Only break down questions that are extremely broad and complex, covering multipl
 Given the following question, determine if it should be broken down into sub-questions for more thorough research.
 {conservative_guidance}
 {simplification_guidance}
+{topic_focus_guidance}
 If the question is already specific, focused on a single aspect, or can be answered comprehensively in one go, do NOT break it down.
 
 Question: {question}
@@ -350,10 +410,11 @@ If needs_breakdown is false, sub_questions can be an empty array.
     if depth > 0:
         system_message += f" At depth {depth}, you MUST ensure that sub-questions are SIGNIFICANTLY SIMPLER than their parent question."
     system_message += " Always respond in valid JSON format."
+    system_message += " Ensure all sub-questions remain directly focused on the original topic and don't introduce tangential subjects."
 
     message = client.messages.create(
-        model="claude-3-haiku-20240307",
-        max_tokens=1000,
+        model=DEFAULT_MODEL,
+        max_tokens=DEFAULT_EVALUATION_MAX_TOKENS,
         temperature=temperature,
         system=system_message,
         messages=[
@@ -400,22 +461,52 @@ If needs_breakdown is false, sub_questions can be an empty array.
         print(f"Response content: {content}")
         return False, []
 
-def get_answer_for_question(question, client):
+def get_answer_for_question(question, client, parent_question=None, depth=0, original_question=None):
     """
     Use Anthropic to get an answer for a specific question
     """
+    context_prompt = ""
+    if parent_question:
+        context_prompt = f"""
+This question is part of a larger research question: "{parent_question}"
+Your answer should be relevant to this broader context while focusing specifically on the sub-question.
+"""
+    
+    # Add original question context if available and different from parent
+    if original_question and original_question != parent_question:
+        context_prompt += f"""
+This is part of research on the original question: "{original_question}"
+Ensure your answer contributes to understanding this original research question.
+"""
+    
+    # Adjust token limit based on depth
+    token_limit = get_token_limit_for_depth(DEFAULT_ANSWER_MAX_TOKENS, depth)
+    
+    # Adjust the prompt based on depth to encourage brevity at deeper levels
+    brevity_guidance = ""
+    if depth >= 1:
+        brevity_guidance = "Be concise and focus only on the most important points."
+    if depth >= 2:
+        brevity_guidance = "Be very brief and focus only on the essential information."
+    if depth >= 3:
+        brevity_guidance = "Provide only the most critical information in a highly condensed format."
+    
     prompt = f"""You are a research assistant.
     
     Please provide a detailed answer to the following question: {question}
     
+    {context_prompt}
+    
     Your answer should be comprehensive but focused specifically on this question.
+    Be concise and direct in your response while covering the key points.
+    {brevity_guidance}
     """
     
     message = client.messages.create(
-        model="claude-3-haiku-20240307",
-        max_tokens=1000,
+        model=DEFAULT_MODEL,
+        max_tokens=token_limit,
         temperature=0.5,
-        system="You are a helpful and friendly research assistant that explains complex concepts in simple terms. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <ol> and <li> for numbered steps, <strong> for emphasis, and <hr> for section dividers.",
+        system="You are a helpful and friendly research assistant that explains complex concepts in simple terms. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <ol> and <li> for numbered steps, <strong> for emphasis, and <hr> for section dividers. Be concise and direct.",
         messages=[
             {"role": "user", "content": prompt}
         ]
@@ -466,13 +557,14 @@ Here is the breakdown of questions and answers:
 {tree_representation}
 
 Please synthesize all this information into a comprehensive, well-structured answer to the original question. Use HTML formatting for better readability.
+Be concise and direct while ensuring all key points are covered.
 """
 
     message = client.messages.create(
-        model="claude-3-haiku-20240307",
-        max_tokens=2000,
+        model=DEFAULT_MODEL,
+        max_tokens=DEFAULT_SYNTHESIS_MAX_TOKENS,
         temperature=0.5,
-        system="You are a helpful research assistant that synthesizes information from multiple sources. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <ol> and <li> for numbered steps, <strong> for emphasis, and <hr> for section dividers.",
+        system="You are a helpful research assistant that synthesizes information from multiple sources. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <ol> and <li> for numbered steps, <strong> for emphasis, and <hr> for section dividers. Be concise and direct in your explanations.",
         messages=[
             {"role": "user", "content": prompt}
         ]
@@ -587,6 +679,16 @@ def generate_tree_visualization(question_tree):
                 color: #888;
                 font-size: 0.8em;
                 margin-right: 10px;
+                background-color: #f0f0f0;
+                padding: 2px 6px;
+                border-radius: 10px;
+                display: inline-block;
+            }
+            .path-indicator {
+                color: #888;
+                font-size: 0.8em;
+                margin-left: 10px;
+                font-style: italic;
             }
             .toggle-icon {
                 font-size: 18px;
@@ -795,15 +897,46 @@ def generate_tree_visualization(question_tree):
                 });
             }
             
-            // Initialize: expand the root node
+            // Validate tree structure on load
             document.addEventListener('DOMContentLoaded', function() {
+                // Expand the root node
                 const rootNode = document.querySelector('.tree-container > .question-node');
                 if (rootNode) {
                     rootNode.classList.add('expanded');
                     const icon = rootNode.querySelector('.toggle-icon');
                     if (icon) icon.textContent = '−';
                 }
+                
+                // Validate the tree structure
+                validateTreeStructure();
             });
+            
+            // Function to validate and fix tree structure
+            function validateTreeStructure() {
+                // Get all nodes
+                const allNodes = document.querySelectorAll('.question-node');
+                
+                allNodes.forEach(node => {
+                    const nodeDepth = parseInt(node.getAttribute('data-depth'));
+                    const parentNode = node.parentElement.closest('.question-node');
+                    
+                    // If this is not the root node and has a parent
+                    if (parentNode) {
+                        const parentDepth = parseInt(parentNode.getAttribute('data-depth'));
+                        
+                        // Check if the depth is correct (should be parent depth + 1)
+                        if (nodeDepth !== parentDepth + 1) {
+                            console.warn(`Node depth mismatch: Node ${node.id} has depth ${nodeDepth} but parent ${parentNode.id} has depth ${parentDepth}`);
+                            
+                            // Update the displayed depth
+                            const depthIndicator = node.querySelector('.depth-indicator');
+                            if (depthIndicator) {
+                                depthIndicator.textContent = `Level ${parentDepth + 1}`;
+                            }
+                        }
+                    }
+                });
+            }
         </script>
     </body>
     </html>
@@ -811,7 +944,7 @@ def generate_tree_visualization(question_tree):
     
     return html
 
-def render_interactive_node_html(node):
+def render_interactive_node_html(node, path=""):
     """
     Render a single node of the question tree as interactive HTML
     """
@@ -822,10 +955,13 @@ def render_interactive_node_html(node):
     max_depth_class = " max-depth-node" if node.get('max_depth_reached', False) else ""
     vague_class = " vague-node" if node.get('is_vague', False) else ""
     
+    # Create the path for this node
+    current_path = path + (f" > {node['question'][:20]}..." if path else "")
+    
     html = f"""
-    <div class="node question-node{max_depth_class}{vague_class}" id="{node_id}">
+    <div class="node question-node{max_depth_class}{vague_class}" id="{node_id}" data-depth="{depth}">
         <div class="node-header" onclick="toggleNode('{node_id}')">
-            <span class="depth-indicator">Depth {depth}:</span>
+            <span class="depth-indicator">Level {depth}</span>
             <span class="node-title">Question: {node['question']}</span>
             <span class="toggle-icon">+</span>
         </div>
@@ -833,13 +969,18 @@ def render_interactive_node_html(node):
             <button onclick="showDetails('{node_id}', true); event.stopPropagation();">View Details</button>
             {f'<span class="max-depth-badge">Max Depth</span>' if node.get('max_depth_reached', False) else ''}
             {f'<span class="vague-badge">Vague Question</span>' if node.get('is_vague', False) else ''}
+            <div class="path-indicator">{current_path}</div>
         </div>
     """
     
-    if node.get('needs_breakdown', False):
+    if node.get('needs_breakdown', False) and node.get('children'):
         html += '<div class="children">'
         for child in node['children']:
-            html += render_interactive_node_html(child)
+            # Ensure child depth is correctly set relative to parent
+            if child['depth'] != depth + 1:
+                print(f"WARNING: Child depth {child['depth']} doesn't match expected {depth + 1}. Fixing...")
+                child['depth'] = depth + 1
+            html += render_interactive_node_html(child, current_path)
         html += '</div>'
     else:
         answer_id = f"answer-{node_id}"
@@ -900,17 +1041,20 @@ def build_response(status_code, body, include_cors=True):
     
     return response
 
-def get_concise_summary_for_broad_question(question, client):
+def get_concise_summary_for_broad_question(question, client, depth=0):
     """
     Get a concise summary for a question that has reached maximum recursion depth
     """
+    # Adjust token limit based on depth
+    token_limit = get_token_limit_for_depth(DEFAULT_ANSWER_MAX_TOKENS, depth)
+    
     prompt = f"""You are a research assistant.
     
     The following question is very broad and has reached the maximum recursion depth in our system:
     
     {question}
     
-    Please provide a CONCISE summary (no more than 300 words) that:
+    Please provide a CONCISE summary (no more than {300 - depth * 50} words) that:
     1. Acknowledges that the question is broad and could be broken down further
     2. Provides a high-level overview of the key points related to this question
     3. Suggests how the user might narrow their focus for more detailed information
@@ -919,8 +1063,8 @@ def get_concise_summary_for_broad_question(question, client):
     """
     
     message = client.messages.create(
-        model="claude-3-haiku-20240307",
-        max_tokens=800,
+        model=DEFAULT_MODEL,
+        max_tokens=token_limit,
         temperature=0.5,
         system="You are a helpful research assistant that provides concise summaries of broad topics. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <div class='note'> for special notes, <strong> for emphasis.",
         messages=[
@@ -1011,10 +1155,13 @@ Your response should be in JSON format:
         print(f"Response content: {content}")
         return False
 
-def get_vanilla_response_for_vague_question(question, client):
+def get_vanilla_response_for_vague_question(question, client, depth=0):
     """
     Provide a vanilla response for questions that are too vague.
     """
+    # Adjust token limit based on depth
+    token_limit = get_token_limit_for_depth(DEFAULT_ANSWER_MAX_TOKENS, depth)
+    
     prompt = f"""You are a research assistant.
     
     The following question is too vague to provide a detailed, specific answer:
@@ -1031,8 +1178,8 @@ def get_vanilla_response_for_vague_question(question, client):
     """
     
     message = client.messages.create(
-        model="claude-3-haiku-20240307",
-        max_tokens=800,
+        model=DEFAULT_MODEL,
+        max_tokens=token_limit,
         temperature=0.5,
         system="You are a helpful research assistant that provides guidance on vague questions. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <div class='note'> for special notes, <strong> for emphasis.",
         messages=[
@@ -1063,3 +1210,76 @@ def has_vague_question_nodes(node):
                 return True
     
     return False
+
+def validate_sub_questions_relevance(original_question, sub_questions, client):
+    """
+    Validate that sub-questions are relevant to the original question.
+    Returns a filtered list of sub-questions that are relevant, or an empty list if none are relevant.
+    """
+    if not sub_questions:
+        return []
+    
+    prompt = f"""You are a research assistant tasked with evaluating whether sub-questions are relevant to the original research question.
+
+Original research question: {original_question}
+
+Sub-questions:
+{json.dumps(sub_questions, indent=2)}
+
+For each sub-question, determine if it is DIRECTLY RELEVANT to the original research question. A relevant sub-question:
+1. Addresses a specific aspect of the original question
+2. Helps answer the original question when combined with other sub-questions
+3. Does not introduce topics that are tangential or unrelated to the original question
+4. Maintains the same general subject matter as the original question
+
+Your response should be in JSON format:
+{{
+  "evaluations": [
+    {{
+      "sub_question": "sub-question 1",
+      "is_relevant": true/false,
+      "reasoning": "Brief explanation of why this sub-question is or is not relevant to the original question"
+    }},
+    ...
+  ]
+}}
+"""
+
+    message = client.messages.create(
+        model=DEFAULT_MODEL,
+        max_tokens=DEFAULT_EVALUATION_MAX_TOKENS,
+        temperature=0.1,  # Low temperature for consistent evaluation
+        system="You are a helpful research assistant that evaluates the relevance of sub-questions to the original research question. Always respond in valid JSON format. Be strict about ensuring sub-questions are directly relevant to the original question.",
+        messages=[
+            {"role": "user", "content": prompt}
+        ]
+    )
+    
+    # Extract the JSON response
+    content = extract_content(message)
+    
+    try:
+        # Find JSON in the response
+        json_start = content.find('{')
+        json_end = content.rfind('}') + 1
+        if json_start >= 0 and json_end > json_start:
+            json_str = content[json_start:json_end]
+            result = json.loads(json_str)
+            
+            # Filter sub-questions to only include those that are relevant
+            relevant_sub_questions = []
+            for eval_item in result.get('evaluations', []):
+                if eval_item.get('is_relevant', False):
+                    relevant_sub_questions.append(eval_item.get('sub_question'))
+                else:
+                    print(f"Removing irrelevant sub-question: {eval_item.get('sub_question')}")
+                    print(f"Reasoning: {eval_item.get('reasoning')}")
+            
+            return relevant_sub_questions
+        else:
+            print(f"Could not find JSON in response: {content}")
+            return []
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON response: {e}")
+        print(f"Response content: {content}")
+        return []
