@@ -269,17 +269,50 @@ button:hover {
 
 #tree-visualization {
     width: 100%;
-    height: 700px;
+    height: 90vh;
+    min-height: 800px;
     border: 1px solid #e8e8e8;
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: auto;
     background-color: #fafafa;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin: 10px 0;
 }
 
 #tree-visualization:hover {
     border-color: #4a6fa5;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* Optimize the tree visualization content */
+#tree-visualization .node {
+    margin: 12px 0;
+    padding: 16px;
+}
+
+#tree-visualization .children {
+    margin-left: 35px;
+    padding-left: 20px;
+}
+
+#tree-visualization .node-title {
+    font-size: 1.05rem;
+    line-height: 1.4;
+}
+
+/* Add responsive adjustments */
+@media (max-width: 768px) {
+    #tree-visualization {
+        height: 80vh;
+        min-height: 600px;
+        padding: 20px;
+    }
+
+    #tree-visualization .children {
+        margin-left: 20px;
+        padding-left: 12px;
+    }
 }
 
 /* Utility Classes */
