@@ -323,8 +323,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Function to clear previous results
     function clearPreviousResults() {
-        answerContent.innerHTML = '';
-        treeVisualization.innerHTML = '';
+        const answerContent = document.getElementById('answer-content');
+        const treeVisualization = document.getElementById('tree-visualization');
+
+        if (answerContent) {
+            answerContent.innerHTML = '';
+        }
+
+        if (treeVisualization) {
+            treeVisualization.innerHTML = '';
+        }
     }
 
     // Detect environment based on URL
