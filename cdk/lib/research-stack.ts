@@ -19,7 +19,9 @@ export class ResearchStack extends cdk.Stack {
         // Get the Anthropic API key secret from SSM Parameter Store
         const anthropicApiParam = new ssm.StringParameter(this, 'AnthropicApiParameter', {
             parameterName: `/personal-assistant/${props.environmentName}/anthropic-api-key-secret-arn`,
-            stringValue: process.env.ANTHROPIC_API_KEY ?? (() => { throw new Error('ANTHROPIC_API_KEY not set in environment') })(),
+            stringValue: props.environmentName === 'prod'
+                ? process.env.DEEP_RESEARCH_PROD_ANTHROPIC_KEY ?? (() => { throw new Error('DEEP_RESEARCH_PROD_ANTHROPIC_KEY not set in environment') })()
+                : process.env.ANTHROPIC_API_KEY ?? (() => { throw new Error('ANTHROPIC_API_KEY not set in environment') })(),
             description: 'API Key for Anthropic Claude API',
             tier: ssm.ParameterTier.STANDARD,
         });
