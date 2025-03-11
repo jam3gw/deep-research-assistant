@@ -15,60 +15,203 @@
 
         /* Styling for the new sections */
         .info-section {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 30px;
             margin-bottom: 30px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
         }
 
         .example-questions {
-            background-color: #e8f4f8;
+            background-color: #f8fafc;
             border-left: 4px solid #3498db;
-            padding: 15px;
+            padding: 20px;
             margin: 20px 0;
+            border-radius: 0 8px 8px 0;
         }
 
         .example-questions h4 {
             margin-top: 0;
-            color: #2980b9;
+            color: #2c3e50;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
         }
 
         .example-questions ul {
             margin-bottom: 0;
+            list-style: none;
+            padding-left: 0;
         }
 
         .example-questions li {
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
 
         .example-questions button {
             background: none;
             border: none;
             color: #3498db;
-            text-decoration: underline;
+            text-decoration: none;
             cursor: pointer;
             padding: 0;
             font: inherit;
             text-align: left;
+            transition: color 0.2s;
+            position: relative;
+            padding-left: 24px;
+            display: block;
+            width: 100%;
+            line-height: 1.5;
+        }
+
+        .example-questions button:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
         }
 
         .example-questions button:hover {
             color: #2980b9;
         }
 
+        .example-questions button:hover:before {
+            opacity: 1;
+            transform: translateX(4px);
+        }
+
         .under-the-hood {
-            margin-top: 30px;
+            margin-top: 40px;
         }
 
         .under-the-hood h3 {
             color: #2c3e50;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 8px;
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .workflow-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .workflow-step {
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid #e9ecef;
+        }
+
+        .workflow-step:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .step-icon {
+            color: #3498db;
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+        }
+
+        .workflow-step h4 {
+            color: #2c3e50;
+            margin: 0 0 12px 0;
+            font-size: 1.1rem;
+        }
+
+        .workflow-step p {
+            color: #5c6c7c;
+            margin: 0;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+
+        .system-info {
+            background-color: #f8fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+            border-left: 4px solid #3498db;
+        }
+
+        .system-info p {
+            margin: 0;
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+
+        .parameters-info {
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e9ecef;
+        }
+
+        .parameters-info h4 {
+            color: #2c3e50;
+            margin: 0 0 16px 0;
+            font-size: 1.1rem;
+        }
+
+        .parameters-info ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .parameters-info li {
+            margin-bottom: 16px;
+            padding-left: 24px;
+            position: relative;
+            color: #5c6c7c;
+            line-height: 1.5;
+        }
+
+        .parameters-info li:last-child {
+            margin-bottom: 0;
+        }
+
+        .parameters-info li:before {
+            content: "•";
+            color: #3498db;
+            position: absolute;
+            left: 8px;
+        }
+
+        .parameters-info strong {
+            color: #2c3e50;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .workflow-container {
+                grid-template-columns: 1fr;
+            }
+
+            .workflow-step {
+                padding: 20px;
+            }
+
+            .parameters-info {
+                padding: 20px;
+            }
         }
     </style>
 </head>
 
 <body>
+    <div class="mobile-disclaimer">
+        <i class="fas fa-info-circle"></i> For the best experience, please use a desktop browser.
+    </div>
     <div class="container">
         <header>
             <h1>Deep Research Assistant</h1>
@@ -122,36 +265,93 @@
 
                 <div class="under-the-hood">
                     <h3>Under the Hood: How This Works</h3>
-                    <p>The Deep Research Assistant uses a sophisticated AI-powered approach to break down complex
-                        questions:</p>
+                    <div class="workflow-container">
+                        <div class="workflow-step">
+                            <div class="step-icon">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                            <div class="step-content">
+                                <h4>Question Analysis</h4>
+                                <p>When you submit a question, the system first analyzes its complexity to determine if
+                                    it needs to be broken down.</p>
+                            </div>
+                        </div>
 
-                    <ol>
-                        <li><strong>Question Analysis:</strong> When you submit a question, the system first analyzes
-                            its complexity to determine if it needs to be broken down.</li>
-                        <li><strong>Recursive Breakdown:</strong> Complex questions are intelligently divided into
-                            simpler sub-questions, which may be further broken down if needed (up to the maximum
-                            recursion depth you set).</li>
-                        <li><strong>Parallel Processing:</strong> The system processes multiple sub-questions
-                            simultaneously to provide faster results.</li>
-                        <li><strong>Individual Answers:</strong> Each leaf question (one that doesn't need further
-                            breakdown) receives its own detailed answer.</li>
-                        <li><strong>Answer Synthesis:</strong> All individual answers are combined into a comprehensive,
-                            well-structured response to your original question.</li>
-                        <li><strong>Visualization:</strong> The question tree visualization shows you exactly how your
-                            question was broken down and answered.</li>
-                    </ol>
+                        <div class="workflow-step">
+                            <div class="step-icon">
+                                <i class="fas fa-code-branch"></i>
+                            </div>
+                            <div class="step-content">
+                                <h4>Recursive Breakdown</h4>
+                                <p>Complex questions are intelligently divided into simpler sub-questions, which may be
+                                    further broken down if needed.</p>
+                            </div>
+                        </div>
 
-                    <p>The system uses Claude AI (via Anthropic's API) with carefully engineered prompts to ensure
-                        high-quality, accurate, and well-structured responses. The recursive approach allows for
-                        handling questions of virtually any complexity.</p>
+                        <div class="workflow-step">
+                            <div class="step-icon">
+                                <i class="fas fa-bolt"></i>
+                            </div>
+                            <div class="step-content">
+                                <h4>Parallel Processing</h4>
+                                <p>The system processes multiple sub-questions simultaneously to provide faster results.
+                                </p>
+                            </div>
+                        </div>
 
-                    <p><strong>Advanced Parameters:</strong></p>
-                    <ul>
-                        <li><strong>Maximum Recursion Depth:</strong> Controls how many levels deep your question can be
-                            broken down. Higher values allow for more detailed analysis but take longer to process.</li>
-                        <li><strong>Maximum Sub-Questions:</strong> Limits how many sub-questions can be generated at
-                            each level. More sub-questions provide broader coverage but increase processing time.</li>
-                    </ul>
+                        <div class="workflow-step">
+                            <div class="step-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="step-content">
+                                <h4>Individual Answers</h4>
+                                <p>Each leaf question receives its own detailed answer.</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-icon">
+                                <i class="fas fa-puzzle-piece"></i>
+                            </div>
+                            <div class="step-content">
+                                <h4>Answer Synthesis</h4>
+                                <p>All individual answers are combined into a comprehensive response to your original
+                                    question.</p>
+                            </div>
+                        </div>
+
+                        <div class="workflow-step">
+                            <div class="step-icon">
+                                <i class="fas fa-project-diagram"></i>
+                            </div>
+                            <div class="step-content">
+                                <h4>Visualization</h4>
+                                <p>The question tree shows you exactly how your question was broken down and answered.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="system-info">
+                        <p>The system uses Claude AI (via Anthropic's API) with carefully engineered prompts to ensure
+                            high-quality, accurate responses. The recursive approach allows for handling questions of
+                            virtually any complexity.</p>
+                    </div>
+
+                    <div class="parameters-info">
+                        <h4>Advanced Parameters</h4>
+                        <ul>
+                            <li>
+                                <strong>Maximum Recursion Depth:</strong> Controls how many levels deep your question
+                                can be broken down. Higher values allow for more detailed analysis but take longer to
+                                process.
+                            </li>
+                            <li>
+                                <strong>Maximum Sub-Questions:</strong> Limits how many sub-questions can be generated
+                                at each level. More sub-questions provide broader coverage but increase processing time.
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </section>
 
@@ -232,7 +432,6 @@
                     <div class="tabs">
                         <button class="tab-button active" data-tab="answer">Answer</button>
                         <button class="tab-button" data-tab="visualization">Question Tree</button>
-                        <button class="tab-button" data-tab="json">Raw Data</button>
                     </div>
 
                     <div class="tab-content">
@@ -242,10 +441,6 @@
 
                         <div id="visualization-tab" class="tab-pane">
                             <div id="tree-visualization"></div>
-                        </div>
-
-                        <div id="json-tab" class="tab-pane">
-                            <pre id="json-content"></pre>
                         </div>
                     </div>
                 </div>
@@ -268,7 +463,9 @@
 
             exampleButtons.forEach(button => {
                 button.addEventListener('click', function () {
-                    questionTextarea.value = this.textContent;
+                    // Clean up the text by removing extra whitespace and newlines
+                    const questionText = this.textContent.trim().replace(/\s+/g, ' ');
+                    questionTextarea.value = questionText;
                     questionTextarea.focus();
                     // Scroll to the form
                     document.querySelector('.research-form').scrollIntoView({ behavior: 'smooth' });

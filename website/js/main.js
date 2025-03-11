@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const resultsSection = document.getElementById('results-section');
     const answerContent = document.getElementById('answer-content');
     const treeVisualization = document.getElementById('tree-visualization');
-    const jsonContent = document.getElementById('json-content');
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabPanes = document.querySelectorAll('.tab-pane');
 
@@ -226,12 +225,6 @@ document.addEventListener('DOMContentLoaded', function () {
             treeVisualization.classList.add('hidden');
         }
 
-        // Display JSON data if the element exists
-        if (jsonContent) {
-            jsonContent.textContent = JSON.stringify(data, null, 2);
-            console.log('Set JSON content');
-        }
-
         // Scroll to results
         resultsSection.scrollIntoView({ behavior: 'smooth' });
     }
@@ -332,7 +325,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function clearPreviousResults() {
         answerContent.innerHTML = '';
         treeVisualization.innerHTML = '';
-        jsonContent.textContent = '';
     }
 
     // Detect environment based on URL
