@@ -5,6 +5,7 @@ import json
 import uuid
 import asyncio
 import concurrent.futures
+import re
 from utils import extract_content
 from config import (
     DEFAULT_MODEL, DEFAULT_EVALUATION_MAX_TOKENS, DEFAULT_ANSWER_MAX_TOKENS,
@@ -154,6 +155,95 @@ async def process_question_node_async(node, client, max_recursion_depth=DEFAULT_
             # Also pass the original question for broader context
             node['answer'] = await get_answer_for_question_async(question, client, parent_question, depth, original_question)
 
+def fix_json_array_formatting(json_str):
+    """Helper function to fix common JSON formatting issues"""
+    # First normalize whitespace to make pattern matching more reliable
+    json_str = re.sub(r'\s+', ' ', json_str)
+    
+    # Fix truncated JSON by completing any incomplete objects
+    if '"reasoning": "' in json_str and not json_str.endswith('"}}]}'):
+        # Find the last complete object
+        last_complete = json_str.rfind('"}},')
+        if last_complete > -1:
+            json_str = json_str[:last_complete+3] + ']}'
+        else:
+            # If we can't find a complete object, try to find the last complete evaluation
+            last_eval = json_str.rfind('"is_valid":')
+            if last_eval > -1:
+                # Find the end of the true/false value
+                bool_end = json_str.find(',', last_eval)
+                if bool_end == -1:
+                    bool_end = json_str.find('}', last_eval)
+                if bool_end > -1:
+                    json_str = json_str[:bool_end+1] + '}]}' 
+    
+    # Fix missing commas between objects in arrays
+    json_str = re.sub(r'}\s*{', '},{', json_str)
+    
+    # Fix any remaining formatting issues
+    json_str = re.sub(r'}\s*]', '}]', json_str)
+    json_str = re.sub(r'\[\s*{', '[{', json_str)
+    
+    # Ensure proper object closure
+    if not json_str.endswith(']}'):
+        if json_str.endswith('"'):
+            json_str += '}]}'
+        elif json_str.endswith('}'):
+            json_str += ']}'
+    
+    return json_str
+
+def parse_json_response(content):
+    """Helper function to parse JSON response with multiple fallback strategies"""
+    try:
+        # Find JSON in the response
+        json_start = content.find('{')
+        json_end = content.rfind('}') + 1
+        if json_start >= 0 and json_end > json_start:
+            json_str = content[json_start:json_end]
+            
+            # Try parsing with progressively more aggressive cleanup
+            try:
+                # First try parsing the original JSON
+                result = json.loads(json_str)
+                print("Successfully parsed original JSON")
+                return result
+            except json.JSONDecodeError as e1:
+                print(f"Initial JSON parsing failed: {e1}")
+                try:
+                    # Try with basic comma fixes
+                    cleaned_str = fix_json_array_formatting(json_str)
+                    result = json.loads(cleaned_str)
+                    print("Successfully parsed with basic cleanup")
+                    return result
+                except json.JSONDecodeError as e2:
+                    print(f"Basic cleanup parsing failed: {e2}")
+                    try:
+                        # Try with more aggressive cleanup
+                        # Normalize whitespace (preserve spaces between words, remove other whitespace)
+                        cleaned_str = ' '.join(json_str.split())
+                        # Fix array formatting
+                        cleaned_str = re.sub(r'}\s*{', '},{', cleaned_str)
+                        # Add missing commas between array elements
+                        cleaned_str = re.sub(r'}({|\[)', '},{', cleaned_str)
+                        # Handle truncated responses
+                        if not cleaned_str.endswith(']}'):
+                            cleaned_str = cleaned_str.rstrip(',') + ']}'
+                        result = json.loads(cleaned_str)
+                        print("Successfully parsed with aggressive cleanup")
+                        return result
+                    except json.JSONDecodeError as e3:
+                        print(f"Aggressive cleanup parsing failed: {e3}")
+                        print(f"Original response: {content}")
+                        return None
+        else:
+            print(f"Could not find JSON in response: {content}")
+            return None
+    except Exception as e:
+        print(f"Error processing response: {str(e)}")
+        print(f"Response content: {content}")
+        return None
+
 def validate_sub_questions_simplicity(parent_question, sub_questions, client, depth):
     """
     Validate that sub-questions are actually simpler than the parent question.
@@ -162,43 +252,44 @@ def validate_sub_questions_simplicity(parent_question, sub_questions, client, de
     if depth == 0 or not sub_questions:
         return sub_questions  # At depth 0, no simplification check needed
     
-    prompt = f"""You are a research assistant tasked with evaluating whether sub-questions are simpler than their parent question and stay on topic.
+    prompt = f"""You are evaluating whether sub-questions are simpler than their parent question.
 
 Parent question: {parent_question}
 
-Sub-questions:
+Sub-questions to evaluate:
 {json.dumps(sub_questions, indent=2)}
 
-For each sub-question, determine if it meets BOTH of these criteria:
-1. It is GENUINELY SIMPLER than the parent question (more specific, narrower scope, less complex)
-2. It STAYS ON TOPIC and is directly relevant to the parent question (not tangential or introducing unrelated topics)
+For each sub-question, determine if it is SIMPLER than the parent question. A simpler question:
+1. Has a narrower scope
+2. Focuses on a specific aspect of the parent question
+3. Is more straightforward to answer
+4. Requires less background knowledge
+5. Can be answered more directly
 
-A good sub-question:
-- Is more specific and narrower in scope
-- Focuses on a single, well-defined aspect of the parent question
-- Is answerable with less complexity
-- Does not introduce new complexity or broaden the scope
-- Remains directly relevant to the parent question
-- Does not deviate into tangential topics
-
-Your response should be in JSON format:
+Your response must be in this exact JSON format, with no additional text:
 {{
   "evaluations": [
     {{
-      "sub_question": "sub-question 1",
+      "sub_question": "first sub-question text",
       "is_valid": true/false,
-      "reasoning": "Brief explanation focusing on simplicity and topic relevance"
+      "reasoning": "Brief explanation"
     }},
-    ...
+    {{
+      "sub_question": "second sub-question text",
+      "is_valid": true/false,
+      "reasoning": "Brief explanation"
+    }}
   ]
 }}
-"""
+
+IMPORTANT: Ensure each object in the evaluations array is separated by a comma. Do not omit commas between array elements.
+IMPORTANT: Keep your reasoning brief and ensure the JSON is complete."""
 
     message = client.messages.create(
         model=DEFAULT_MODEL,
         max_tokens=DEFAULT_EVALUATION_MAX_TOKENS,
         temperature=0.0,  # Zero temperature for maximum consistency
-        system="You are a helpful research assistant that evaluates the quality of sub-questions. Always respond in valid JSON format. Be strict about ensuring sub-questions are both simpler AND stay on topic.",
+        system="You are a helpful research assistant that evaluates the quality of sub-questions. Always respond in valid JSON format with proper commas between array elements. Never omit commas between array objects. Keep responses brief and ensure JSON is complete.",
         messages=[
             {"role": "user", "content": prompt}
         ]
@@ -206,32 +297,20 @@ Your response should be in JSON format:
     
     # Extract the JSON response
     content = extract_content(message)
+    result = parse_json_response(content)
     
-    try:
-        # Find JSON in the response
-        json_start = content.find('{')
-        json_end = content.rfind('}') + 1
-        if json_start >= 0 and json_end > json_start:
-            json_str = content[json_start:json_end]
-            result = json.loads(json_str)
-            
-            # Filter sub-questions to only include those that are simpler and on topic
-            valid_sub_questions = []
-            for eval_item in result.get('evaluations', []):
-                if eval_item.get('is_valid', False):
-                    valid_sub_questions.append(eval_item.get('sub_question'))
-                else:
-                    print(f"Removing invalid sub-question: {eval_item.get('sub_question')}")
-                    print(f"Reasoning: {eval_item.get('reasoning')}")
-            
-            return valid_sub_questions
-        else:
-            print(f"Could not find JSON in response: {content}")
-            return []
-    except json.JSONDecodeError as e:
-        print(f"Error parsing JSON response: {e}")
-        print(f"Response content: {content}")
-        return []
+    if result:
+        # Filter sub-questions to only include those that are simpler
+        valid_sub_questions = []
+        for eval_item in result.get('evaluations', []):
+            if eval_item.get('is_valid', False):
+                valid_sub_questions.append(eval_item.get('sub_question'))
+            else:
+                print(f"Removing invalid sub-question: {eval_item.get('sub_question')}")
+                print(f"Reasoning: {eval_item.get('reasoning')}")
+        
+        return valid_sub_questions
+    return []
 
 def should_break_down_question(question, client, recursion_threshold=DEFAULT_RECURSION_THRESHOLD, max_sub_questions=DEFAULT_SUB_QUESTIONS, depth=0):
     """
@@ -429,7 +508,7 @@ For each sub-question, determine if it is DIRECTLY RELEVANT to the original rese
 3. Does not introduce topics that are tangential or unrelated to the original question
 4. Maintains the same general subject matter as the original question
 
-Your response should be in JSON format:
+Your response must be in this exact JSON format, with no additional text:
 {{
   "evaluations": [
     {{
@@ -437,16 +516,22 @@ Your response should be in JSON format:
       "is_relevant": true/false,
       "reasoning": "Brief explanation of why this sub-question is or is not relevant to the original question"
     }},
-    ...
+    {{
+      "sub_question": "sub-question 2",
+      "is_relevant": true/false,
+      "reasoning": "Brief explanation of why this sub-question is or is not relevant to the original question"
+    }}
   ]
 }}
-"""
+
+IMPORTANT: Ensure each object in the evaluations array is separated by a comma. Do not omit commas between array elements.
+IMPORTANT: Keep your reasoning brief and ensure the JSON is complete."""
 
     message = client.messages.create(
         model=DEFAULT_MODEL,
         max_tokens=DEFAULT_EVALUATION_MAX_TOKENS,
         temperature=0.0,  # Zero temperature for maximum consistency
-        system="You are a helpful research assistant that evaluates the relevance of sub-questions to the original research question. Always respond in valid JSON format. Be strict about ensuring sub-questions are directly relevant to the original question.",
+        system="You are a helpful research assistant that evaluates the relevance of sub-questions to the original research question. Always respond in valid JSON format with proper commas between array elements. Never omit commas between array objects. Keep responses brief and ensure JSON is complete.",
         messages=[
             {"role": "user", "content": prompt}
         ]
@@ -454,32 +539,20 @@ Your response should be in JSON format:
     
     # Extract the JSON response
     content = extract_content(message)
+    result = parse_json_response(content)
     
-    try:
-        # Find JSON in the response
-        json_start = content.find('{')
-        json_end = content.rfind('}') + 1
-        if json_start >= 0 and json_end > json_start:
-            json_str = content[json_start:json_end]
-            result = json.loads(json_str)
-            
-            # Filter sub-questions to only include those that are relevant
-            relevant_sub_questions = []
-            for eval_item in result.get('evaluations', []):
-                if eval_item.get('is_relevant', False):
-                    relevant_sub_questions.append(eval_item.get('sub_question'))
-                else:
-                    print(f"Removing irrelevant sub-question: {eval_item.get('sub_question')}")
-                    print(f"Reasoning: {eval_item.get('reasoning')}")
-            
-            return relevant_sub_questions
-        else:
-            print(f"Could not find JSON in response: {content}")
-            return []
-    except json.JSONDecodeError as e:
-        print(f"Error parsing JSON response: {e}")
-        print(f"Response content: {content}")
-        return []
+    if result:
+        # Filter sub-questions to only include those that are relevant
+        relevant_sub_questions = []
+        for eval_item in result.get('evaluations', []):
+            if eval_item.get('is_relevant', False):
+                relevant_sub_questions.append(eval_item.get('sub_question'))
+            else:
+                print(f"Removing irrelevant sub-question: {eval_item.get('sub_question')}")
+                print(f"Reasoning: {eval_item.get('reasoning')}")
+        
+        return relevant_sub_questions
+    return []
 
 def is_question_too_vague(question, client):
     """
