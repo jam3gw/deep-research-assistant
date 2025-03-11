@@ -260,6 +260,142 @@
             margin-top: 20px;
         }
 
+        .tabs {
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+        }
+
+        .tab-button {
+            padding: 12px 24px;
+            border: none;
+            background: none;
+            color: #64748b;
+            font-size: 1rem;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .tab-button[data-tab="visualization"] {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-button[data-tab="visualization"]::before {
+            content: '\f1e0';
+            /* This is a tree-like icon */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            font-size: 0.9em;
+        }
+
+        .tab-button[data-tab="visualization"]::after {
+            content: 'New!';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #3498db;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .tab-button:hover {
+            color: #3498db;
+        }
+
+        .tab-button.active {
+            color: #3498db;
+            font-weight: 600;
+        }
+
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #3498db;
+        }
+
+        /* Tree Preview styles */
+        .tree-preview {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .tree-preview-content {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .tree-preview-content>i {
+            font-size: 2rem;
+            color: #3498db;
+        }
+
+        .preview-text {
+            flex: 1;
+        }
+
+        .preview-text h4 {
+            margin: 0 0 8px 0;
+            color: #2c3e50;
+            font-size: 1.1rem;
+        }
+
+        .preview-text p {
+            margin: 0;
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+
+        .preview-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .preview-button:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+
         @media (max-width: 768px) {
             .workflow-container {
                 grid-template-columns: 1fr;
@@ -326,6 +462,17 @@
 
             #visualization-tab {
                 padding: 10px;
+            }
+
+            .tree-preview-content {
+                flex-direction: column;
+                text-align: center;
+                padding: 20px;
+            }
+
+            .preview-button {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
@@ -560,6 +707,20 @@
                     <div class="tab-content">
                         <div id="answer-tab" class="tab-pane active">
                             <div id="answer-content"></div>
+                            <div class="tree-preview">
+                                <div class="tree-preview-content">
+                                    <i class="fas fa-lightbulb"></i>
+                                    <div class="preview-text">
+                                        <h4>Want to see how we got here?</h4>
+                                        <p>Check out the Question Tree to see how your complex question was broken down
+                                            and analyzed step by step.</p>
+                                    </div>
+                                    <button class="preview-button"
+                                        onclick="document.querySelector('[data-tab=visualization]').click()">
+                                        View Question Tree <i class="fas fa-arrow-right"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <div id="visualization-tab" class="tab-pane">
