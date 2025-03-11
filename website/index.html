@@ -192,6 +192,74 @@
             margin-bottom: 4px;
         }
 
+        /* Tree Visualization Styles */
+        #tree-visualization {
+            padding: 20px;
+            margin: 0 auto;
+        }
+
+        #tree-visualization .node-container {
+            margin: 15px 0;
+        }
+
+        #tree-visualization .node {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: box-shadow 0.2s;
+            max-width: 600px;
+        }
+
+        #tree-visualization .node:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #tree-visualization .children {
+            margin-left: 40px;
+            position: relative;
+        }
+
+        #tree-visualization .children::before {
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e0e0e0;
+        }
+
+        #tree-visualization .node-question {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        #tree-visualization .node-answer {
+            color: #5c6c7c;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+
+        #tree-visualization .node-metadata {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        #visualization-tab {
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
         @media (max-width: 768px) {
             .workflow-container {
                 grid-template-columns: 1fr;
@@ -203,6 +271,61 @@
 
             .parameters-info {
                 padding: 20px;
+            }
+
+            /* Mobile styles for tree visualization */
+            #tree-visualization {
+                overflow-x: auto;
+                padding: 15px;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #tree-visualization .node {
+                margin: 10px 0;
+                padding: 12px;
+                font-size: 14px;
+                word-wrap: break-word;
+                max-width: 280px;
+            }
+
+            #tree-visualization .node-container {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                margin: 10px 0;
+            }
+
+            #tree-visualization .children {
+                margin-left: 20px;
+                border-left: 2px solid #e0e0e0;
+                padding-left: 15px;
+            }
+
+            #tree-visualization .node-content {
+                background: #ffffff;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                padding: 12px;
+                margin: 5px 0;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+            #tree-visualization .node-question {
+                font-weight: 600;
+                color: #2c3e50;
+                margin-bottom: 8px;
+            }
+
+            #tree-visualization .node-answer {
+                color: #5c6c7c;
+                font-size: 13px;
+                line-height: 1.4;
+            }
+
+            #visualization-tab {
+                padding: 10px;
             }
         }
     </style>
