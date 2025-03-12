@@ -130,26 +130,198 @@ def create_sample_tree():
     
     return root
 
+def create_basic_tree():
+    """Create a basic tree structure for testing."""
+    root = {
+        'id': str(uuid.uuid4()),
+        'question': 'What is a basic question?',
+        'depth': 0,
+        'needs_breakdown': True,
+        'children': [
+            {
+                'id': str(uuid.uuid4()),
+                'question': 'Child question 1?',
+                'depth': 1,
+                'needs_breakdown': False,
+                'answer': 'Answer to child question 1',
+                'sources': [{'title': 'Source 1', 'url': 'https://example.com/1'}]
+            },
+            {
+                'id': str(uuid.uuid4()),
+                'question': 'Child question 2?',
+                'depth': 1,
+                'needs_breakdown': False,
+                'answer': 'Answer to child question 2',
+                'sources': [{'title': 'Source 2', 'url': 'https://example.com/2'}]
+            }
+        ]
+    }
+    return root
+
+def create_deep_tree():
+    """Create a deep tree structure for testing."""
+    root = {
+        'id': str(uuid.uuid4()),
+        'question': 'Level 0 Question?',
+        'depth': 0,
+        'needs_breakdown': True,
+        'children': []
+    }
+    
+    # Level 1
+    level1 = {
+        'id': str(uuid.uuid4()),
+        'question': 'Level 1 Question?',
+        'depth': 1,
+        'needs_breakdown': True,
+        'children': [],
+        'parent_question': root['question']
+    }
+    
+    # Level 2
+    level2 = {
+        'id': str(uuid.uuid4()),
+        'question': 'Level 2 Question?',
+        'depth': 2,
+        'needs_breakdown': True,
+        'children': [],
+        'parent_question': level1['question']
+    }
+    
+    # Level 3
+    level3 = {
+        'id': str(uuid.uuid4()),
+        'question': 'Level 3 Question?',
+        'depth': 3,
+        'needs_breakdown': False,
+        'answer': 'This is a level 3 answer.',
+        'sources': [{'title': 'Deep Source', 'url': 'https://example.com/deep'}],
+        'parent_question': level2['question']
+    }
+    
+    # Build the tree
+    level2['children'] = [level3]
+    level1['children'] = [level2]
+    root['children'] = [level1]
+    
+    return root
+
+def create_edge_cases_tree():
+    """Create a tree with edge cases for testing."""
+    root = {
+        'id': str(uuid.uuid4()),
+        'question': 'Edge Cases Test?',
+        'depth': 0,
+        'needs_breakdown': True,
+        'children': []
+    }
+    
+    # Node without children
+    node_no_children = {
+        'id': str(uuid.uuid4()),
+        'question': 'Node without children?',
+        'depth': 1,
+        'needs_breakdown': False,
+        'answer': 'This node has no children.',
+        'sources': [{'title': 'Source', 'url': 'https://example.com/source'}],
+        'parent_question': root['question']
+    }
+    
+    # Node without answer
+    node_no_answer = {
+        'id': str(uuid.uuid4()),
+        'question': 'Node without answer?',
+        'depth': 1,
+        'needs_breakdown': False,
+        'sources': [{'title': 'Source', 'url': 'https://example.com/source'}],
+        'parent_question': root['question']
+    }
+    
+    # Node without sources
+    node_no_sources = {
+        'id': str(uuid.uuid4()),
+        'question': 'Node without sources?',
+        'depth': 1,
+        'needs_breakdown': False,
+        'answer': 'This node has no sources.',
+        'parent_question': root['question']
+    }
+    
+    # Node with HTML content
+    node_with_html = {
+        'id': str(uuid.uuid4()),
+        'question': 'Node with HTML content?',
+        'depth': 1,
+        'needs_breakdown': False,
+        'answer': '<h1>HTML Title</h1><p>This is a <strong>paragraph</strong> with <em>HTML</em> content.</p>',
+        'sources': [{'title': 'HTML Source', 'url': 'https://example.com/html'}],
+        'parent_question': root['question']
+    }
+    
+    # Node with very long question
+    node_long_question = {
+        'id': str(uuid.uuid4()),
+        'question': 'This is a very long question that should test how the visualization handles long text content and whether it wraps properly or causes layout issues when the text is extremely long and verbose and contains many words that might cause the layout to break if not handled correctly?',
+        'depth': 1,
+        'needs_breakdown': False,
+        'answer': 'Answer to long question.',
+        'sources': [{'title': 'Long Source', 'url': 'https://example.com/long'}],
+        'parent_question': root['question']
+    }
+    
+    # Add all nodes to root
+    root['children'] = [
+        node_no_children,
+        node_no_answer,
+        node_no_sources,
+        node_with_html,
+        node_long_question
+    ]
+    
+    return root
+
 def main():
-    """Generate and save a test tree visualization."""
-    # Create sample tree
-    question_tree = create_sample_tree()
-    
-    # Generate tree visualization
-    print("Generating tree visualization...")
-    tree_visualization = generate_tree_visualization(question_tree)
-    
-    # Save tree visualization
+    """Generate and save test tree visualizations."""
+    # Create output directory
     os.makedirs('output', exist_ok=True)
-    with open('output/test_tree.html', 'w') as f:
-        f.write(tree_visualization)
     
-    # Save tree data for reference
-    with open('output/test_tree_data.json', 'w') as f:
-        json.dump(question_tree, f, indent=2)
+    # Test 1: Sample Tree (Complex AI and Climate Change)
+    sample_tree = create_sample_tree()
+    sample_visualization = generate_tree_visualization(sample_tree)
+    with open('output/sample_tree.html', 'w') as f:
+        f.write(sample_visualization)
+    with open('output/sample_tree_data.json', 'w') as f:
+        json.dump(sample_tree, f, indent=2)
+    print("Sample tree visualization saved to output/sample_tree.html")
     
-    print("Tree visualization saved to output/test_tree.html")
-    print("Tree data saved to output/test_tree_data.json")
+    # Test 2: Basic Tree
+    basic_tree = create_basic_tree()
+    basic_visualization = generate_tree_visualization(basic_tree)
+    with open('output/basic_tree.html', 'w') as f:
+        f.write(basic_visualization)
+    with open('output/basic_tree_data.json', 'w') as f:
+        json.dump(basic_tree, f, indent=2)
+    print("Basic tree visualization saved to output/basic_tree.html")
+    
+    # Test 3: Deep Tree
+    deep_tree = create_deep_tree()
+    deep_visualization = generate_tree_visualization(deep_tree)
+    with open('output/deep_tree.html', 'w') as f:
+        f.write(deep_visualization)
+    with open('output/deep_tree_data.json', 'w') as f:
+        json.dump(deep_tree, f, indent=2)
+    print("Deep tree visualization saved to output/deep_tree.html")
+    
+    # Test 4: Edge Cases
+    edge_tree = create_edge_cases_tree()
+    edge_visualization = generate_tree_visualization(edge_tree)
+    with open('output/edge_cases_tree.html', 'w') as f:
+        f.write(edge_visualization)
+    with open('output/edge_cases_tree_data.json', 'w') as f:
+        json.dump(edge_tree, f, indent=2)
+    print("Edge cases tree visualization saved to output/edge_cases_tree.html")
+    
+    print("\nAll test visualizations have been generated. Open the HTML files in a browser to view them.")
 
 if __name__ == '__main__':
     main() 
