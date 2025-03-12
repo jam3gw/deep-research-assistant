@@ -17,16 +17,16 @@
         .info-section {
             background-color: #ffffff;
             border-radius: 12px;
-            padding: 30px;
-            margin-bottom: 30px;
+            padding: 24px;
+            margin-bottom: 40px;
             box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
         }
 
         .example-questions {
             background-color: #f8fafc;
             border-left: 4px solid #3498db;
-            padding: 20px;
-            margin: 20px 0;
+            padding: 16px;
+            margin: 16px 0;
             border-radius: 0 8px 8px 0;
         }
 
@@ -34,7 +34,7 @@
             margin-top: 0;
             color: #2c3e50;
             font-size: 1.2rem;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
 
         .example-questions ul {
@@ -44,7 +44,7 @@
         }
 
         .example-questions li {
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
 
         .example-questions button {
@@ -58,7 +58,7 @@
             text-align: left;
             transition: color 0.2s;
             position: relative;
-            padding-left: 24px;
+            padding-left: 20px;
             display: block;
             width: 100%;
             line-height: 1.5;
@@ -261,14 +261,14 @@
         }
 
         .tabs {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             border-bottom: 2px solid #e9ecef;
             display: flex;
             gap: 10px;
         }
 
         .tab-button {
-            padding: 12px 24px;
+            padding: 10px 20px;
             border: none;
             background: none;
             color: #64748b;
@@ -341,15 +341,15 @@
 
         /* Tree Preview styles */
         .tree-preview {
-            margin-top: 40px;
-            padding-top: 30px;
+            margin-top: 32px;
+            padding-top: 24px;
             border-top: 1px solid #e9ecef;
         }
 
         .tree-preview-content {
             background: #f8fafc;
             border-radius: 12px;
-            padding: 24px;
+            padding: 20px;
             display: flex;
             align-items: center;
             gap: 20px;
@@ -475,6 +475,554 @@
                 justify-content: center;
             }
         }
+
+        /* Architecture Diagram Styles */
+        .architecture-diagram {
+            background: linear-gradient(to bottom, #1a1a1a, #2d2d2d);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 50px;
+            color: white;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .aws-region {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .region-label {
+            color: #ff9900;
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .region-label:before {
+            content: '•';
+            color: #ff9900;
+            animation: pulse 2s infinite;
+        }
+
+        .aws-services {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 25px;
+        }
+
+        .service {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .service:hover {
+            transform: translateY(-4px);
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .service i {
+            font-size: 28px;
+            margin-bottom: 12px;
+            color: #ff9900;
+            transition: transform 0.3s ease;
+        }
+
+        .service:hover i {
+            transform: scale(1.1);
+        }
+
+        .service span {
+            display: block;
+            font-size: 1rem;
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        /* Data Flow - Enhanced */
+        .data-flow {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            margin: 50px 0;
+            padding: 30px;
+            background: #f8fafc;
+            border-radius: 16px;
+            min-width: 1000px;
+            position: relative;
+        }
+
+        .flow-step {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 25px;
+            background: #ffffff;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.03);
+        }
+
+        /* Add connecting arrows between flow steps */
+        .flow-step:not(:last-child)::after {
+            content: '→';
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #3498db;
+            font-size: 20px;
+            z-index: 2;
+            animation: flowArrow 1.5s infinite;
+        }
+
+        @keyframes flowArrow {
+            0% {
+                transform: translate(0, -50%);
+            }
+
+            50% {
+                transform: translate(5px, -50%);
+            }
+
+            100% {
+                transform: translate(0, -50%);
+            }
+        }
+
+        /* Tech Notes - Integrated */
+        .tech-notes {
+            display: flex;
+            gap: 30px;
+            margin-top: 50px;
+            background: linear-gradient(to right, #f8fafc, #ffffff);
+            border-radius: 16px;
+            padding: 30px;
+            position: relative;
+        }
+
+        .tech-notes::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 20px;
+            background: #3498db;
+        }
+
+        .note-section {
+            flex: 1;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+
+        .note-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(to bottom, #3498db, #2980b9);
+            border-radius: 4px 0 0 4px;
+        }
+
+        .note-section h3 {
+            color: #1a202c;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            padding-left: 15px;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .data-flow {
+                grid-template-columns: 1fr;
+                min-width: auto;
+                padding: 20px;
+            }
+
+            .flow-step:not(:last-child)::after {
+                content: '↓';
+                right: auto;
+                top: auto;
+                bottom: -20px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            .tech-notes {
+                flex-direction: column;
+            }
+
+            .tech-notes::before {
+                display: none;
+            }
+        }
+
+        /* Legend Styles */
+        .diagram-legend {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .legend-item i {
+            font-size: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .diagram-legend {
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+            }
+        }
+
+        /* Header Styles Enhancement */
+        header {
+            text-align: center;
+            padding: 60px 20px 30px;
+            background: linear-gradient(to bottom, #ffffff, #f8fafc);
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .header-description {
+            max-width: 650px;
+            margin: 0 auto;
+            font-size: 1.1rem;
+            line-height: 1.7;
+            color: #4a5568;
+        }
+
+        .header-description .tech-stack {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0.5rem 0;
+            padding: 0.5rem 1rem;
+            background: #f1f5f9;
+            border-radius: 20px;
+            font-size: 0.95rem;
+        }
+
+        .header-description .tech-stack strong {
+            color: #2563eb;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 40px 20px;
+            }
+
+            header h1 {
+                font-size: 2rem;
+            }
+
+            .header-description {
+                font-size: 1rem;
+            }
+        }
+
+        /* Global Spacing and Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Form Section Refinements */
+        .research-form {
+            margin-bottom: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .parameters-section {
+            margin-bottom: 24px;
+        }
+
+        .parameter-group {
+            padding: 16px;
+        }
+
+        /* Results Section Refinements */
+        .results-container {
+            margin-top: 40px;
+        }
+
+        .tabs {
+            margin-bottom: 16px;
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+        }
+
+        .tree-preview {
+            margin-top: 32px;
+            padding-top: 24px;
+        }
+
+        .tree-preview-content {
+            padding: 20px;
+        }
+
+        /* Footer Refinements */
+        footer {
+            padding: 24px 0;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 16px;
+            }
+
+            header {
+                padding: 32px 0;
+            }
+
+            .tech-sequence {
+                padding: 16px;
+            }
+
+            .info-section {
+                padding: 20px;
+            }
+
+            .example-questions {
+                padding: 12px;
+            }
+        }
+
+        .service-description {
+            background: white;
+            border-radius: 20px;
+            margin: 20px 0;
+            padding: 30px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        .description-content h3 {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .description-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-bottom: 0;
+        }
+
+        .description-item {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .description-item h4 {
+            color: #3498db;
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .description-item p {
+            color: #475569;
+            line-height: 1.7;
+            margin: 0;
+        }
+
+        /* Architecture Section Styles */
+        .architecture-section {
+            padding: 0;
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+            margin-bottom: 30px;
+        }
+
+        .architecture-section h2 {
+            display: none;
+        }
+
+        /* Component Grid */
+        .tech-sequence {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+            overflow-x: auto;
+        }
+
+        .component-grid {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            min-width: 1000px;
+            position: relative;
+        }
+
+        .tech-component {
+            flex: 1;
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            transition: transform 0.3s ease;
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+
+        .tech-header {
+            background: linear-gradient(to right, #2c3e50, #3498db);
+            color: white;
+            padding: 16px 20px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .tech-details {
+            padding: 20px;
+        }
+
+        .tech-details code {
+            display: inline-block;
+            background: #f1f5f9;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+            color: #2563eb;
+            border: 1px solid #e2e8f0;
+        }
+
+        .tech-details ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .tech-details li {
+            padding: 8px 0;
+            color: #475569;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tech-details li:before {
+            content: "→";
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        /* Component Arrows */
+        .tech-component:not(:last-child)::after {
+            content: '→';
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #3498db;
+            font-size: 24px;
+            z-index: 2;
+            animation: flowArrow 1.5s infinite;
+        }
+
+        @keyframes flowArrow {
+            0% {
+                transform: translate(0, -50%);
+            }
+
+            50% {
+                transform: translate(5px, -50%);
+            }
+
+            100% {
+                transform: translate(0, -50%);
+            }
+        }
+
+        .tech-component:hover {
+            transform: translateY(-4px);
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .architecture-section {
+                padding: 40px 20px;
+            }
+
+            .tech-sequence {
+                padding: 16px;
+            }
+
+            .component-grid {
+                flex-direction: column;
+                min-width: auto;
+            }
+
+            .tech-component:not(:last-child)::after {
+                content: '↓';
+                right: auto;
+                bottom: -20px;
+                left: 50%;
+                top: auto;
+                transform: translateX(-50%);
+            }
+
+            .tech-component {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 
@@ -485,32 +1033,109 @@
     <div class="container">
         <header>
             <h1>Deep Research Assistant</h1>
-            <p>AI-powered tool to break down complex research questions</p>
+            <div class="header-description">
+                <p>Break down your research questions into a tree of sub-questions, each answered with evidence from the
+                    web and academic sources.</p>
+                <div class="tech-stack">
+                    Powered by <strong>Claude</strong> • <strong>OpenAI</strong> • <strong>Brave Search</strong>
+                </div>
+            </div>
         </header>
 
         <main>
-            <section class="intro">
-                <h2>How It Works</h2>
-                <div class="steps">
-                    <div class="step">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <h3>Enter Your Question</h3>
-                            <p>Type in a complex research question you want to explore.</p>
+            <section class="architecture-section">
+                <!-- AI Components Layer -->
+                <div class="tech-sequence">
+                    <div class="component-grid">
+                        <div class="tech-component">
+                            <div class="tech-header">Input Processing</div>
+                            <div class="tech-details">
+                                <code>Claude (Anthropic)</code>
+                                <ul>
+                                    <li>Question analysis</li>
+                                    <li>Task decomposition</li>
+                                    <li>Research planning</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="tech-component">
+                            <div class="tech-header">Knowledge Retrieval</div>
+                            <div class="tech-details">
+                                <code>Brave Search API</code>
+                                <ul>
+                                    <li>Web content search</li>
+                                    <li>Source filtering</li>
+                                    <li>Data extraction</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="tech-component">
+                            <div class="tech-header">Vector Processing</div>
+                            <div class="tech-details">
+                                <code>OpenAI + FAISS</code>
+                                <ul>
+                                    <li>Text embedding</li>
+                                    <li>Similarity search</li>
+                                    <li>Context ranking</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="tech-component">
+                            <div class="tech-header">Answer Generation</div>
+                            <div class="tech-details">
+                                <code>Claude + RAG</code>
+                                <ul>
+                                    <li>Context fusion</li>
+                                    <li>Answer synthesis</li>
+                                    <li>Tree assembly</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
-                    <div class="step">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <h3>Configure Parameters</h3>
-                            <p>Adjust optional parameters or use the default values.</p>
+                </div>
+            </section>
+
+            <section class="service-description">
+                <div class="description-content">
+                    <h3>How It Works</h3>
+                    <div class="description-grid">
+                        <div class="description-item">
+                            <h4>1. Question Analysis & Decomposition</h4>
+                            <p>When you submit a research question, Claude first analyzes its complexity and scope.
+                                Complex questions are automatically broken down into smaller, more manageable
+                                sub-questions using a sophisticated decomposition algorithm. This process creates a
+                                hierarchical tree structure, ensuring that each aspect of your question is thoroughly
+                                addressed.</p>
                         </div>
-                    </div>
-                    <div class="step">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <h3>Get Results</h3>
-                            <p>Receive a comprehensive answer and see how your question was broken down.</p>
+                        <div class="description-item">
+                            <h4>2. Dynamic Knowledge Gathering</h4>
+                            <p>For each sub-question, the system uses Brave Search API to gather relevant, up-to-date
+                                information from across the web. The search process is guided by context-aware filters
+                                that prioritize reliable sources and recent information. This ensures that your answers
+                                are based on current and accurate data.</p>
+                        </div>
+                        <div class="description-item">
+                            <h4>3. Semantic Processing</h4>
+                            <p>Retrieved content is processed using OpenAI's advanced embedding technology and stored in
+                                a FAISS vector database. This allows for semantic similarity matching, helping to
+                                identify the most relevant information for each sub-question. The system can understand
+                                context and relationships between different pieces of information, going beyond simple
+                                keyword matching.</p>
+                        </div>
+                        <div class="description-item">
+                            <h4>4. Answer Synthesis</h4>
+                            <p>Claude then processes the organized information using a sophisticated RAG
+                                (Retrieval-Augmented Generation) pipeline. This combines the retrieved knowledge with
+                                its own understanding to generate comprehensive, well-structured answers. Each
+                                sub-question is answered individually, maintaining clear logical connections.</p>
+                        </div>
+                        <div class="description-item">
+                            <h4>5. Tree Assembly & Visualization</h4>
+                            <p>Finally, the system assembles all components into an interactive question tree. This
+                                visualization shows how your original question was broken down and answered, allowing
+                                you to explore each branch of research. The tree structure helps you understand the
+                                relationship between different aspects of your query and how they contribute to the
+                                complete answer.</p>
                         </div>
                     </div>
                 </div>
@@ -531,97 +1156,6 @@
                         <li><button class="example-question-btn">What are the most promising technologies for addressing
                                 climate change, and what are their limitations?</button></li>
                     </ul>
-                </div>
-
-                <div class="under-the-hood">
-                    <h3>Under the Hood: How This Works</h3>
-                    <div class="workflow-container">
-                        <div class="workflow-step">
-                            <div class="step-icon">
-                                <i class="fas fa-brain"></i>
-                            </div>
-                            <div class="step-content">
-                                <h4>Question Analysis</h4>
-                                <p>When you submit a question, the system first analyzes its complexity to determine if
-                                    it needs to be broken down.</p>
-                            </div>
-                        </div>
-
-                        <div class="workflow-step">
-                            <div class="step-icon">
-                                <i class="fas fa-code-branch"></i>
-                            </div>
-                            <div class="step-content">
-                                <h4>Recursive Breakdown</h4>
-                                <p>Complex questions are intelligently divided into simpler sub-questions, which may be
-                                    further broken down if needed.</p>
-                            </div>
-                        </div>
-
-                        <div class="workflow-step">
-                            <div class="step-icon">
-                                <i class="fas fa-bolt"></i>
-                            </div>
-                            <div class="step-content">
-                                <h4>Parallel Processing</h4>
-                                <p>The system processes multiple sub-questions simultaneously to provide faster results.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="workflow-step">
-                            <div class="step-icon">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-                            <div class="step-content">
-                                <h4>Individual Answers</h4>
-                                <p>Each leaf question receives its own detailed answer.</p>
-                            </div>
-                        </div>
-
-                        <div class="workflow-step">
-                            <div class="step-icon">
-                                <i class="fas fa-puzzle-piece"></i>
-                            </div>
-                            <div class="step-content">
-                                <h4>Answer Synthesis</h4>
-                                <p>All individual answers are combined into a comprehensive response to your original
-                                    question.</p>
-                            </div>
-                        </div>
-
-                        <div class="workflow-step">
-                            <div class="step-icon">
-                                <i class="fas fa-project-diagram"></i>
-                            </div>
-                            <div class="step-content">
-                                <h4>Visualization</h4>
-                                <p>The question tree shows you exactly how your question was broken down and answered.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="system-info">
-                        <p>The system uses Claude AI (via Anthropic's API) with carefully engineered prompts to ensure
-                            high-quality, accurate responses. The recursive approach allows for handling questions of
-                            virtually any complexity.</p>
-                    </div>
-
-                    <div class="parameters-info">
-                        <h4>Advanced Parameters</h4>
-                        <ul>
-                            <li>
-                                <strong>Maximum Recursion Depth:</strong> Controls how many levels deep your question
-                                can be broken down. Higher values allow for more detailed analysis but take longer to
-                                process.
-                            </li>
-                            <li>
-                                <strong>Maximum Sub-Questions:</strong> Limits how many sub-questions can be generated
-                                at each level. More sub-questions provide broader coverage but increase processing time.
-                            </li>
-                        </ul>
-                    </div>
                 </div>
             </section>
 
