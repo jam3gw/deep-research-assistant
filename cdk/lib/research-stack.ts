@@ -26,16 +26,36 @@ export class ResearchStack extends cdk.Stack {
             tier: ssm.ParameterTier.STANDARD,
         });
 
+        const braveApiParam = new ssm.StringParameter(this, 'BraveApiParameter', {
+            parameterName: `/personal-assistant/${props.environmentName}/brave-api-key-secret-arn`,
+            stringValue: props.environmentName === 'prod'
+                ? process.env.DEEP_RESEARCH_PROD_BRAVE_KEY ?? (() => { throw new Error('DEEP_RESEARCH_PROD_BRAVE_KEY not set in environment') })()
+                : process.env.BRAVE_API_KEY ?? (() => { throw new Error('BRAVE_API_KEY not set in environment') })(),
+            description: 'API Key for Brave Search API',
+            tier: ssm.ParameterTier.STANDARD,
+        });
+
+        // Get the OpenAI API key secret from SSM Parameter Store
+        const openaiApiParam = new ssm.StringParameter(this, 'OpenAIApiParameter', {
+            parameterName: `/personal-assistant/${props.environmentName}/openai-api-key-secret-arn`,
+            stringValue: props.environmentName === 'prod'
+                ? process.env.DEEP_RESEARCH_PROD_OPENAI_KEY ?? (() => { throw new Error('DEEP_RESEARCH_PROD_OPENAI_KEY not set in environment') })()
+                : process.env.OPENAI_API_KEY ?? (() => { throw new Error('OPENAI_API_KEY not set in environment') })(),
+            description: 'API Key for OpenAI API',
+            tier: ssm.ParameterTier.STANDARD,
+        });
         // Create a Lambda function for the research generator
         const researchGenerator = new PythonFunction(this, 'ResearchGenerator', {
             entry: path.join(__dirname, '../../lambda/research-generator'),
             index: 'lambda_function.py',
             handler: 'lambda_handler',
-            timeout: cdk.Duration.minutes(5),
+            timeout: cdk.Duration.minutes(10),
             runtime: lambda.Runtime.PYTHON_3_9,
-            memorySize: 2048,
+            memorySize: 3008,
             environment: {
                 ANTHROPIC_API_KEY_SECRET_NAME: anthropicApiParam.parameterName,
+                BRAVE_API_KEY_SECRET_NAME: braveApiParam.parameterName,
+                OPENAI_API_KEY_SECRET_NAME: openaiApiParam.parameterName,
                 ENVIRONMENT: props.environmentName,
             },
             logRetention: logs.RetentionDays.ONE_WEEK,
@@ -43,7 +63,8 @@ export class ResearchStack extends cdk.Stack {
                 assetExcludes: [
                     'venv',
                     '__pycache__',
-                    'research_output.json',
+                    'vector_db',
+                    'output',
                     'test_locally.py',
                     'test_setup.py',
                     'test_deployed.py',
@@ -56,7 +77,7 @@ export class ResearchStack extends cdk.Stack {
         researchGenerator.addToRolePolicy(new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
             actions: ['ssm:GetParameter'],
-            resources: [anthropicApiParam.parameterArn],
+            resources: [anthropicApiParam.parameterArn, braveApiParam.parameterArn, openaiApiParam.parameterArn],
         }));
 
         // Add a Lambda Function URL with CORS enabled

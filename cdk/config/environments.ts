@@ -28,15 +28,6 @@ const config: AppConfig = {
                 Project: 'PersonalAssistant'
             }
         }
-        // You can add more environments here as needed
-        // staging: {
-        //   name: 'staging',
-        //   domainName: 'personal-assistant.staging.jake-moses.com',
-        //   tags: {
-        //     Environment: 'staging',
-        //     Project: 'PersonalAssistant'
-        //   }
-        // }
     }
 };
 
