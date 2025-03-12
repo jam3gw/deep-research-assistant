@@ -25,6 +25,7 @@ Each rule is defined in its own file with a specific format:
 - `rag-implementation.mdc` - Guidelines for RAG (Retrieval Augmented Generation) implementation
 - `tree-visualization.mdc` - Guidelines for tree visualization component
 - `tree-depth-handling.mdc` - Guidelines for handling depth in tree visualization
+- `tree-testing.mdc` - Guidelines for testing tree visualization
 
 ## How to Add a New Rule
 
