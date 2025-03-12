@@ -2,25 +2,74 @@
 
 This document outlines the guidelines for handling depth in the question tree visualization component of the personal-assistant project.
 
-## Depth Calculation
-
-When working with the tree visualization component, follow these guidelines for handling depth:
+## Core Concepts
 
 1. **Logical Depth vs. Visual Depth**
    - Logical depth: The actual depth level of the node in the question tree (0, 1, 2, etc.)
    - Visual depth: The nesting level used for rendering the tree in the UI
-   - These two concepts should be kept separate to avoid inconsistencies
+   - These two concepts must be kept separate to avoid inconsistencies
 
-2. **Depth Propagation**
-   - When rendering child nodes, pass the visual depth for nesting, not the logical depth
-   - The logical depth should be preserved as-is from the original node data
-   - Use the `data-depth` attribute to store the logical depth for styling purposes
+2. **Depth Attributes**
+   - `depth`: The original depth property in the node data
+   - `display_depth`: Used for level indicators and styling
+   - `visual_depth`: Used for controlling visual nesting in the UI
+   - `data-depth`: HTML attribute used for CSS styling
 
-3. **Consistent Level Numbering**
-   - Level indicators should always reflect the logical depth of the node
-   - Level 0 is the root question
-   - Level 1 is a direct child of the root
-   - Level 2 is a grandchild of the root
+## Implementation Pattern
+
+The correct implementation pattern for handling depth in the tree visualization:
+
+```python
+def render_interactive_node_html(node, path="", parent_depth=None):
+    # Get the original depth from the node
+    original_depth = node['depth']
+    
+    # Use original depth for display (logical depth)
+    display_depth = original_depth
+    
+    # Use separate variable for visual nesting
+    visual_depth = parent_depth + 1 if parent_depth is not None else 0
+    
+    # Include data-depth attribute for styling
+    html = f"""
+    <div class="node question-node" id="{node_id}" data-depth="{display_depth}">
+        <!-- Node content -->
+    </div>
+    """
+    
+    # For child nodes, pass visual_depth for nesting
+    if node.get('children'):
+        for child in node['children']:
+            html += render_interactive_node_html(child, path, visual_depth)
+    
+    return html
+```
+
+## CSS Styling for Depth
+
+Use CSS selectors with the `data-depth` attribute to style nodes based on their logical depth:
+
+```css
+/* Style nodes differently based on their depth */
+.question-node[data-depth="0"] {
+    border-left-color: #4a6fa5;
+    background-color: #f0f5ff;
+}
+.question-node[data-depth="1"] {
+    border-left-color: #5c7cfa;
+    background-color: #f5f8ff;
+}
+.question-node[data-depth="2"] {
+    border-left-color: #748ffc;
+    background-color: #f8faff;
+}
+
+/* Style depth indicators based on level */
+.question-node[data-depth="0"] .depth-indicator {
+    background-color: #e7f0ff;
+    color: #4a6fa5;
+}
+```
 
 ## Visual Hierarchy
 
@@ -34,6 +83,16 @@ Root Question (Level 0)
     │       └── Grandchild Question (Level 2)
     └── Child Question (Level 1)
 ```
+
+## Testing Depth Handling
+
+When testing the tree visualization:
+
+1. Create a sample tree with nodes at different depths
+2. Verify that level indicators match the logical depth
+3. Check that the visual nesting is consistent
+4. Ensure styling is applied correctly based on depth
+5. Test with both shallow and deep trees
 
 ## Common Issues and Solutions
 
@@ -56,4 +115,11 @@ If the visual nesting doesn't match the logical structure:
 For consistent styling based on depth:
 - Use the `data-depth` attribute for CSS selectors
 - Apply different styles to nodes at different depths
-- Use a consistent color scheme that visually indicates depth 
+- Use a consistent color scheme that visually indicates depth
+
+### Browser Compatibility
+
+If the tree looks different across browsers:
+- Use standard CSS properties with good cross-browser support
+- Test in multiple browsers
+- Consider adding browser-specific prefixes for certain CSS properties 

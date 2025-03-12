@@ -2,6 +2,20 @@
 
 This document outlines the guidelines for the tree visualization component of the personal-assistant project.
 
+## Core Principles
+
+1. **Separation of Concerns**: Always separate logical depth from visual nesting
+   - Use the original depth from the node data for level indicators
+   - Use a separate visual depth variable for controlling the UI nesting
+
+2. **Consistent Styling**: Apply consistent styling based on node depth
+   - Use data attributes (e.g., `data-depth`) for styling different levels
+   - Maintain a consistent color scheme that visually indicates depth
+
+3. **Proper Nesting**: Ensure the visual hierarchy matches the logical structure
+   - Use proper CSS for indentation and nesting
+   - Maintain consistent margins and padding
+
 ## HTML Content Handling
 
 When working with the tree visualization component, follow these guidelines for handling HTML content:
@@ -13,6 +27,7 @@ When working with the tree visualization component, follow these guidelines for 
 2. **CSS Styling**: Maintain consistent styling across all nodes
    - Use the defined CSS classes for different node types (question-node, answer-node)
    - Do not add inline styles directly to node content
+   - Use the `data-depth` attribute for depth-specific styling
 
 3. **Source References**: Always include source references in a consistent format
    - Sources should be displayed in the `.sources` container
@@ -37,6 +52,39 @@ Root Question (Level 0)
     └── Answer
         └── Sources
 ```
+
+## Implementation Guidelines
+
+1. **Depth Handling**:
+   ```python
+   # Get the original depth from the node
+   original_depth = node['depth']
+   
+   # Use original depth for display (logical depth)
+   display_depth = original_depth
+   
+   # Use separate variable for visual nesting
+   visual_depth = parent_depth + 1 if parent_depth is not None else 0
+   ```
+
+2. **Node Rendering**:
+   ```python
+   # Include data-depth attribute for styling
+   html = f"""
+   <div class="node question-node" id="{node_id}" data-depth="{display_depth}">
+       <div class="node-header">
+           <span class="depth-indicator">Level {display_depth}</span>
+           <span class="node-title">{node['question']}</span>
+       </div>
+   """
+   ```
+
+3. **Child Node Rendering**:
+   ```python
+   # Pass visual_depth for nesting, not logical depth
+   for child in node['children']:
+       html += render_interactive_node_html(child, path, visual_depth)
+   ```
 
 ## Debugging Tree Issues
 
@@ -66,6 +114,7 @@ If sources are not displaying:
 ### Inconsistent Node Depth
 
 If node depths appear inconsistent:
-- Check the `parent_depth` parameter is being passed correctly
-- Verify the depth calculation logic in `render_interactive_node_html`
-- Ensure each node has a valid `depth` property 
+- Ensure `display_depth` uses the original depth from the node
+- Verify that `visual_depth` is properly calculated and passed to child nodes
+- Check that the CSS for different depth levels is correctly defined
+- Use the browser's developer tools to inspect the HTML structure and CSS classes 
