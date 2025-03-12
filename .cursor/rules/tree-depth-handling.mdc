@@ -1,0 +1,59 @@
+# Tree Depth Handling Guidelines
+
+This document outlines the guidelines for handling depth in the question tree visualization component of the personal-assistant project.
+
+## Depth Calculation
+
+When working with the tree visualization component, follow these guidelines for handling depth:
+
+1. **Logical Depth vs. Visual Depth**
+   - Logical depth: The actual depth level of the node in the question tree (0, 1, 2, etc.)
+   - Visual depth: The nesting level used for rendering the tree in the UI
+   - These two concepts should be kept separate to avoid inconsistencies
+
+2. **Depth Propagation**
+   - When rendering child nodes, pass the visual depth for nesting, not the logical depth
+   - The logical depth should be preserved as-is from the original node data
+   - Use the `data-depth` attribute to store the logical depth for styling purposes
+
+3. **Consistent Level Numbering**
+   - Level indicators should always reflect the logical depth of the node
+   - Level 0 is the root question
+   - Level 1 is a direct child of the root
+   - Level 2 is a grandchild of the root
+
+## Visual Hierarchy
+
+The tree should maintain a consistent visual hierarchy:
+
+```
+Root Question (Level 0)
+└── Children Container
+    ├── Child Question (Level 1)
+    │   └── Children Container
+    │       └── Grandchild Question (Level 2)
+    └── Child Question (Level 1)
+```
+
+## Common Issues and Solutions
+
+### Inconsistent Level Numbering
+
+If level numbers appear inconsistent:
+- Ensure the `display_depth` variable uses the original depth from the node
+- Do not modify the logical depth based on parent depth
+- Use a separate variable for visual nesting
+
+### Incorrect Nesting
+
+If the visual nesting doesn't match the logical structure:
+- Check that the `visual_depth` is properly incremented for each level
+- Ensure the CSS for `.children` properly indents child nodes
+- Verify that the parent-child relationships in the data are correct
+
+### Styling Issues
+
+For consistent styling based on depth:
+- Use the `data-depth` attribute for CSS selectors
+- Apply different styles to nodes at different depths
+- Use a consistent color scheme that visually indicates depth 

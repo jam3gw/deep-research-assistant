@@ -1,0 +1,71 @@
+# RAG Implementation Guidelines
+
+This document outlines the guidelines for implementing Retrieval Augmented Generation (RAG) in the personal-assistant project.
+
+## Core Components
+
+The RAG implementation consists of these core components:
+
+1. **Knowledge Base Manager**: Responsible for retrieving and managing external knowledge
+2. **Embedding Engine**: Creates vector embeddings for questions and documents
+3. **Retrieval System**: Finds relevant documents based on semantic similarity
+4. **Generation System**: Produces answers using retrieved context and LLM capabilities
+5. **Question Tree Builder**: Creates a hierarchical structure of questions and answers
+
+## Data Flow
+
+The standard RAG data flow should follow this pattern:
+
+1. User question is received
+2. Question is embedded into a vector representation
+3. Relevant documents are retrieved from knowledge sources
+4. Retrieved documents are combined into a context
+5. Context and question are sent to the LLM for answer generation
+6. Sources are tracked and included with the generated answer
+7. Sub-questions are generated to explore the topic further
+8. The process repeats for each sub-question
+
+## Answer Format
+
+All generated answers should:
+
+1. Include source references with titles and URLs
+2. Use appropriate HTML formatting for structure
+3. Be concise at deeper tree levels
+4. Maintain consistent formatting across the tree
+
+## Token Management
+
+Token limits should be managed carefully:
+
+1. Root questions (depth 0) should use the full token limit
+2. Each level deeper should use a reduced token limit
+3. The reduction should follow the pattern defined in `get_token_limit_for_depth()`
+4. Very deep levels (3+) should have minimal token limits to prevent excessive content
+
+## Error Handling
+
+Implement robust error handling:
+
+1. Handle API failures gracefully
+2. Provide fallback mechanisms when knowledge retrieval fails
+3. Log all errors with appropriate context
+4. Ensure the tree structure remains intact even when parts fail
+
+## Performance Considerations
+
+To maintain good performance:
+
+1. Cache embeddings when possible
+2. Limit the number of API calls for similar questions
+3. Implement rate limiting for external APIs
+4. Consider batching requests when generating multiple answers
+
+## Testing
+
+When testing RAG implementations:
+
+1. Verify source attribution is correct
+2. Check that token limits are respected
+3. Ensure the question tree maintains proper structure
+4. Test with a variety of question types and depths 

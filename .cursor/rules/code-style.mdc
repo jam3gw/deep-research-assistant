@@ -1,0 +1,69 @@
+# Code Style Guidelines
+
+This document outlines the coding standards and style guidelines for the personal-assistant project.
+
+## Python Style Guidelines
+
+### General Formatting
+
+- Follow PEP 8 style guidelines
+- Use 4 spaces for indentation (no tabs)
+- Maximum line length of 100 characters
+- Use snake_case for variable and function names
+- Use CamelCase for class names
+- Use UPPER_CASE for constants
+
+### Imports
+
+- Group imports in the following order:
+  1. Standard library imports
+  2. Related third-party imports
+  3. Local application/library specific imports
+- Use absolute imports when possible
+- Avoid wildcard imports (`from module import *`)
+
+### Documentation
+
+- Use docstrings for all public modules, functions, classes, and methods
+- Follow Google-style docstrings format
+- Include type hints for function parameters and return values
+
+Example:
+```python
+def generate_answer(question: str, depth: int = 0) -> dict:
+    """
+    Generate an answer for the given question at the specified depth.
+    
+    Args:
+        question: The question to answer
+        depth: The depth level in the question tree (default: 0)
+        
+    Returns:
+        A dictionary containing the answer and sources
+    """
+    # Function implementation
+```
+
+### Error Handling
+
+- Use specific exception types rather than catching all exceptions
+- Include meaningful error messages
+- Log exceptions appropriately
+
+## RAG Implementation Guidelines
+
+- Token limits should be adjusted based on question depth
+- Always include source references for generated answers
+- Maintain a consistent format for returned data structures
+
+## Testing
+
+- Write unit tests for all new functionality
+- Maintain test coverage above 80%
+- Use descriptive test names that explain what is being tested
+
+## Version Control
+
+- Write clear, concise commit messages
+- Reference issue numbers in commit messages when applicable
+- Create feature branches for new development 

@@ -1,0 +1,71 @@
+# Tree Visualization Guidelines
+
+This document outlines the guidelines for the tree visualization component of the personal-assistant project.
+
+## HTML Content Handling
+
+When working with the tree visualization component, follow these guidelines for handling HTML content:
+
+1. **HTML Escaping**: Always escape HTML content in node questions and answers to prevent rendering issues
+   - Use appropriate escaping functions when inserting user-generated or API-returned content
+   - Be particularly careful with content that might contain HTML tags
+
+2. **CSS Styling**: Maintain consistent styling across all nodes
+   - Use the defined CSS classes for different node types (question-node, answer-node)
+   - Do not add inline styles directly to node content
+
+3. **Source References**: Always include source references in a consistent format
+   - Sources should be displayed in the `.sources` container
+   - Each source should include both title and URL when available
+   - Sources should be clickable links that open in a new tab
+
+## Tree Structure
+
+The question tree should maintain a consistent structure:
+
+```
+Root Question (Level 0)
+├── Answer
+│   └── Sources
+├── Sub-Question 1 (Level 1)
+│   ├── Answer
+│   │   └── Sources
+│   └── Sub-Sub-Question (Level 2)
+│       ├── Answer
+│       │   └── Sources
+└── Sub-Question 2 (Level 1)
+    └── Answer
+        └── Sources
+```
+
+## Debugging Tree Issues
+
+When debugging tree visualization issues:
+
+1. Check for missing or undefined properties in the node objects
+2. Verify that HTML content is properly escaped
+3. Inspect the generated HTML for structural issues
+4. Ensure CSS styles are being properly applied
+5. Verify that the toggle functionality works correctly
+
+## Common Issues and Solutions
+
+### HTML Content Breaking Layout
+
+If HTML tags in answers are breaking the layout:
+- Ensure content is properly escaped or sanitized
+- Consider using a dedicated HTML sanitizer library
+
+### Missing Sources
+
+If sources are not displaying:
+- Verify the sources array exists in the node object
+- Check that sources have both title and URL properties
+- Ensure the sources CSS is properly defined
+
+### Inconsistent Node Depth
+
+If node depths appear inconsistent:
+- Check the `parent_depth` parameter is being passed correctly
+- Verify the depth calculation logic in `render_interactive_node_html`
+- Ensure each node has a valid `depth` property 
