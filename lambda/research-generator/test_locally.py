@@ -74,6 +74,9 @@ def main():
         # Initialize RAG engine
         rag = RAGEngine()
         
+        # Set OpenAI API key
+        rag.set_openai_key(os.environ['OPENAI_API_KEY'])
+        
         # Generate answer with question tree
         print("\nGenerating question tree and answers...")
         try:
@@ -94,9 +97,14 @@ def main():
         print("\nGenerating final synthesized answer...")
         try:
             if question_tree.get('needs_breakdown', False):
-                final_answer = rag.generate_answer(args.question, client, brave_key)
+                # If tree was broken down, use the last answer as final
+                answer_data = rag.generate_answer(args.question, client, brave_key)
+                final_answer = answer_data['content']
+                sources = answer_data['sources']
             else:
+                # If no breakdown, use the direct answer
                 final_answer = question_tree['answer']
+                sources = question_tree.get('sources', [])
         except Exception as e:
             logger.error(f"Error generating final answer: {str(e)}")
             raise
@@ -108,20 +116,30 @@ def main():
         print("\n=== Final Answer ===")
         print(final_answer)
         
+        print("\n=== Sources ===")
+        for i, source in enumerate(sources, 1):
+            print(f"{i}. {source.get('title', 'Untitled')} - {source.get('url', 'No URL')}")
+        
         # Save output
         output = {
             'explanation': final_answer,
             'tree_visualization': tree_visualization,
             'question_tree': question_tree,
+            'sources': sources,
             'execution_time': time.time() - start_time
         }
         
         os.makedirs('output', exist_ok=True)
         with open('output/last_run.json', 'w') as f:
             json.dump(output, f, indent=2)
+            
+        # Save tree visualization to a separate HTML file for easy viewing
+        with open('output/tree.html', 'w') as f:
+            f.write(tree_visualization)
         
         print(f"\nExecution completed in {time.time() - start_time:.2f} seconds")
         print("Results saved to output/last_run.json")
+        print("Tree visualization saved to output/tree.html")
         
     except Exception as e:
         print(f"\nError: {str(e)}")

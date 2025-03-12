@@ -17,6 +17,26 @@ from utils import extract_content
 from knowledge_base import KnowledgeBaseManager
 import time
 
+def get_token_limit_for_depth(base_limit: int, depth: int) -> int:
+    """
+    Calculate the token limit based on the depth of the question.
+    
+    Args:
+        base_limit (int): The base token limit (e.g., DEFAULT_ANSWER_MAX_TOKENS)
+        depth (int): The depth of the current question in the tree
+        
+    Returns:
+        int: The adjusted token limit for the given depth
+    """
+    # For depth 0 (root), use the full base limit
+    if depth == 0:
+        return base_limit
+        
+    # For deeper levels, reduce the token limit to keep responses more focused
+    # Use a linear reduction strategy
+    reduction_factor = max(0.25, 1 - (depth * 0.25))  # Reduce by 25% for each level, minimum 25% of base
+    return int(base_limit * reduction_factor)
+
 class RAGEngine:
     def __init__(self):
         self.index = None
@@ -258,7 +278,7 @@ IMPORTANT: Return ONLY the sub-questions, one per line. Do not include any other
         # For deeper levels or if question is specific enough, don't generate sub-questions
         if depth >= 2:
             node['needs_breakdown'] = False
-            node['answer'] = self.generate_answer(question, client, brave_api_key)
+            node['answer'] = self.generate_answer(question, client, brave_api_key, depth)
             return node
         
         # Generate sub-questions using dynamic knowledge base
@@ -267,7 +287,7 @@ IMPORTANT: Return ONLY the sub-questions, one per line. Do not include any other
         if len(sub_questions) <= 1:
             # If no meaningful breakdown, treat as leaf node
             node['needs_breakdown'] = False
-            node['answer'] = self.generate_answer(question, client, brave_api_key)
+            node['answer'] = self.generate_answer(question, client, brave_api_key, depth)
         else:
             # Process sub-questions recursively
             node['needs_breakdown'] = True
@@ -278,7 +298,7 @@ IMPORTANT: Return ONLY the sub-questions, one per line. Do not include any other
         
         return node
     
-    def generate_answer(self, query: str, client, brave_api_key: str) -> str:
+    def generate_answer(self, query: str, client, brave_api_key: str, depth: int = 0) -> str:
         """Generate an answer using RAG approach with dynamic knowledge base."""
         # First, populate knowledge base with relevant content
         self.kb_manager.populate_from_brave_search(query, brave_api_key, num_results=3)
@@ -290,8 +310,44 @@ IMPORTANT: Return ONLY the sub-questions, one per line. Do not include any other
         context = "\n\n".join([doc['content'] for doc in relevant_docs])
         
         # Generate answer using Claude
-        system_message = "You are a helpful research assistant that provides well-structured answers based on provided context. Format your response with HTML tags for better readability: use <h3> for section titles, <p> for paragraphs, <strong> for emphasis."
-        
+        system_message = """You are a helpful research assistant that provides well-structured answers based on provided context.
+Format your response with semantic HTML tags for optimal readability and structure:
+
+1. Document Structure:
+- Use <h1> for the main title/topic
+- Use <h2> for major sections
+- Use <h3> for subsections if needed
+
+2. Content Sections:
+- Wrap each major section in <div class="section technology"> or <div class="section limitation"> based on content type
+- Use <p> for regular paragraphs
+- Use <strong> only for emphasizing specific terms or phrases, not entire paragraphs
+- Use <ul> and <li> for lists
+
+3. Formatting Guidelines:
+- Keep paragraphs concise and focused
+- Use lists for multiple related points
+- Maintain consistent heading hierarchy
+- Add appropriate spacing for readability
+
+Example structure:
+<h1>Main Topic</h1>
+<p>Introduction paragraph...</p>
+
+<div class="section technology">
+    <h2>Technology Section</h2>
+    <p>Overview of the technology, with <strong>key terms</strong> emphasized.</p>
+    <ul>
+        <li>Key point 1</li>
+        <li>Key point 2</li>
+    </ul>
+</div>
+
+<div class="section limitation">
+    <h2>Limitations</h2>
+    <p>Discussion of limitations...</p>
+</div>"""
+
         prompt = f"""Context:
 {context}
 
@@ -300,11 +356,19 @@ Question: {query}
 Please provide a comprehensive answer based on the context provided. If the context doesn't contain enough information,
 you can use your general knowledge but clearly indicate when you're doing so.
 
-Format your response with HTML tags for better readability."""
+Structure your response following these guidelines:
+1. Start with a clear title using <h1>
+2. Begin with a brief overview paragraph
+3. Organize content into logical sections using appropriate HTML tags
+4. Use <strong> sparingly - only for emphasizing specific terms, not entire paragraphs
+5. Use lists when presenting multiple related points
+6. Wrap each major section in an appropriate div with semantic class names
+
+Make the content visually appealing and easy to scan while maintaining a professional tone."""
 
         message = client.messages.create(
             model=DEFAULT_MODEL,
-            max_tokens=DEFAULT_ANSWER_MAX_TOKENS,
+            max_tokens=get_token_limit_for_depth(DEFAULT_ANSWER_MAX_TOKENS, depth),
             temperature=0,
             system=system_message,
             messages=[

@@ -70,7 +70,7 @@ def lambda_handler(event, context):
             # Get the final answer from the tree structure
             if question_tree['needs_breakdown']:
                 # If tree was broken down, use the last answer as final
-                final_answer = rag.generate_answer(query, client, brave_key)
+                final_answer = rag.generate_answer(query, client, brave_key, depth=0)
             else:
                 # If no breakdown, use the direct answer
                 final_answer = question_tree['answer']
