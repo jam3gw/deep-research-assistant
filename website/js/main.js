@@ -12,12 +12,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // DOM elements
     const questionForm = document.getElementById('question-form');
     const researchQuestion = document.getElementById('research-question');
-    const recursionDepth = document.getElementById('recursion-depth');
-    const recursionDepthValue = document.getElementById('recursion-depth-value');
-    const subQuestions = document.getElementById('sub-questions');
-    const subQuestionsValue = document.getElementById('sub-questions-value');
-    const toggleParameters = document.getElementById('toggle-parameters');
-    const parametersContainer = document.getElementById('parameters-container');
+    // Default parameter values (no longer user-configurable)
+    const DEFAULT_RECURSION_DEPTH = 2;
+    const DEFAULT_SUB_QUESTIONS = 5;
     const submitButton = document.getElementById('submit-button');
     const loadingIndicator = document.getElementById('loading-indicator');
     const resultsSection = document.getElementById('results-section');
@@ -48,27 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Current research data
     let currentResearchData = null;
 
-    // Update range input values
-    recursionDepth.addEventListener('input', function () {
-        recursionDepthValue.textContent = this.value;
-    });
-
-    subQuestions.addEventListener('input', function () {
-        subQuestionsValue.textContent = this.value;
-    });
-
-    // Toggle advanced parameters
-    toggleParameters.addEventListener('click', function () {
-        parametersContainer.classList.toggle('hidden');
-        const icon = this.querySelector('i');
-        if (parametersContainer.classList.contains('hidden')) {
-            icon.classList.remove('fa-chevron-up');
-            icon.classList.add('fa-chevron-down');
-        } else {
-            icon.classList.remove('fa-chevron-down');
-            icon.classList.add('fa-chevron-up');
-        }
-    });
+    // Advanced parameters section removed - no longer user-configurable
 
     // Tab switching
     tabButtons.forEach(button => {
@@ -141,11 +118,11 @@ document.addEventListener('DOMContentLoaded', function () {
         resultsSection.classList.add('hidden');
         clearPreviousResults();
 
-        // Prepare request data
+        // Prepare request data with default parameter values
         const requestData = {
             expression: researchQuestion.value.trim(),
-            max_recursion_depth: parseInt(recursionDepth.value),
-            max_sub_questions: parseInt(subQuestions.value),
+            max_recursion_depth: DEFAULT_RECURSION_DEPTH,
+            max_sub_questions: DEFAULT_SUB_QUESTIONS,
             recursion_threshold: 1 // Default to Conservative (1)
         };
 

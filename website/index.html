@@ -1153,34 +1153,6 @@
                             required></textarea>
                     </div>
 
-                    <div class="parameters-section">
-                        <h3>Advanced Parameters <button type="button" id="toggle-parameters" class="toggle-button"><i
-                                    class="fas fa-chevron-down"></i></button></h3>
-                        <div id="parameters-container" class="hidden">
-                            <div class="parameter-group">
-                                <div class="form-group">
-                                    <label for="recursion-depth">Maximum Recursion Depth:</label>
-                                    <div class="parameter-input">
-                                        <input type="range" id="recursion-depth" min="0" max="4" value="2">
-                                        <span id="recursion-depth-value">2</span>
-                                    </div>
-                                    <p class="parameter-description">Controls how many levels deep the question can be
-                                        broken down (0-4).</p>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="sub-questions">Maximum Sub-Questions:</label>
-                                    <div class="parameter-input">
-                                        <input type="range" id="sub-questions" min="1" max="5" value="5">
-                                        <span id="sub-questions-value">5</span>
-                                    </div>
-                                    <p class="parameter-description">Limits the number of sub-questions generated at
-                                        each level (1-5).</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="form-actions">
                         <button type="submit" id="submit-button">Generate Research</button>
                         <div id="loading-indicator">
