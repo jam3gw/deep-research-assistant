@@ -1,0 +1,43 @@
+{
+    "include": [
+        "lambda/**",
+        "website/**",
+        "cdk/**"
+    ],
+    "exclude": [
+        "**/node_modules",
+        "**/dist",
+        "**/build",
+        "**/.git",
+        "**/__pycache__",
+        "**/venv",
+        "**/env",
+        "**/.venv",
+        "**/.env",
+        "**/frontend",
+        "**/.pytest_cache",
+        "**/.coverage",
+        "**/.DS_Store",
+        "**/cdk.out",
+        "**/htmlcov",
+        "**/tmp",
+        "**/temp",
+        "**/.idea",
+        "**/.vscode",
+        "**/logs"
+    ],
+    "ignore": [
+        "**/node_modules",
+        "**/__pycache__"
+    ],
+    "defineConstant": {
+        "DEBUG": true
+    },
+    "reportMissingImports": true,
+    "reportMissingTypeStubs": false,
+    "pythonVersion": "3.9",
+    "typeCheckingMode": "basic",
+    "useLibraryCodeForTypes": true,
+    "venvPath": ".",
+    "venv": "venv"
+}
