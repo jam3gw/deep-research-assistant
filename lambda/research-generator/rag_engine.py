@@ -838,16 +838,14 @@ IMPORTANT:
                     # Extract content and add to context
                     content = extract_content(doc)
                     if content:
-                        # Add source number reference to the context
-                        source_num = i + 1
-                        context += f"\n\nSource [{source_num}]:\n{content}"
+                        # Add source to context without numbered references
+                        context += f"\n\nSource Information:\n{content}"
                         
                         # Add source information
                         if 'metadata' in doc:
                             source_url = doc['metadata'].get('source', 'Unknown source')
                             source_title = doc['metadata'].get('title', 'Untitled')
                             sources.append({
-                                'number': source_num,
                                 'url': source_url,
                                 'title': source_title
                             })
@@ -946,14 +944,10 @@ Format your response with semantic HTML tags for optimal readability and structu
 - Use clear, simple language
 - Include the most important information first
 
-3. Source Citations:
-- When referencing information from the provided sources, include a citation using the format [X] where X is the source number
-- DO NOT include a sources section at the end of your response - this will be handled separately
-
 Example structure:
 <h1>Direct Answer to Question</h1>
-<p>Clear explanation with <strong>key terms</strong> highlighted [1].</p>
-<p>Additional relevant information if needed [2].</p>"""
+<p>Clear explanation with <strong>key terms</strong> highlighted.</p>
+<p>Additional relevant information if needed.</p>"""
 
                         prompt = f"""Context:
 {context}
@@ -966,8 +960,8 @@ Guidelines:
 1. Be direct and to the point
 2. Provide a complete answer
 3. Use appropriate HTML formatting for readability
-4. Cite sources using [X] format
-5. DO NOT include a sources section at the end - this will be handled separately"""
+4. DO NOT include a sources section at the end - this will be handled separately
+5. DO NOT use numbered citations like [1], [2], etc. in your response"""
                     else:
                         # Use standard comprehensive prompt for non-simple questions
                         system_message = """You are a helpful research assistant that provides comprehensive, well-structured answers based on provided context.
@@ -990,23 +984,20 @@ Format your response with semantic HTML tags for optimal readability and structu
 - Use bullet points for lists of features, benefits, or steps
 - Break down complex topics into digestible sections
 - Use examples to illustrate concepts when helpful
-
-4. Source Citations:
-- When referencing information from the provided sources, include a citation using the format [X] where X is the source number
-- DO NOT include a sources section at the end of your response - this will be handled separately
+- DO NOT use numbered citations like [1], [2], etc. in your response
 
 Example structure:
 <h1>Comprehensive Topic Overview</h1>
-<p>Thorough introduction with <strong>key terms</strong> highlighted [1].</p>
+<p>Thorough introduction with <strong>key terms</strong> highlighted.</p>
 
 <div class="section technology">
     <h2>Major Section</h2>
-    <p>Detailed explanation [2].</p>
+    <p>Detailed explanation.</p>
     
     <h3>Subsection</h3>
     <ul>
-        <li>Detailed point 1 [3]</li>
-        <li>Detailed point 2 [1]</li>
+        <li>Detailed point 1</li>
+        <li>Detailed point 2</li>
     </ul>
 </div>"""
 
@@ -1020,8 +1011,8 @@ Please provide a comprehensive answer to this question based on the provided con
 Guidelines:
 1. Be thorough and well-structured
 2. Use appropriate HTML formatting for readability
-3. Cite sources using [X] format
-4. DO NOT include a sources section at the end - this will be handled separately"""
+3. DO NOT include a sources section at the end - this will be handled separately
+4. DO NOT use numbered citations like [1], [2], etc. in your response"""
                 except Exception as e:
                     print(f"ERROR during complexity assessment: {str(e)}. Using standard comprehensive prompt.")
                     # Fall back to standard comprehensive prompt
@@ -1045,23 +1036,20 @@ Format your response with semantic HTML tags for optimal readability and structu
 - Use bullet points for lists of features, benefits, or steps
 - Break down complex topics into digestible sections
 - Use examples to illustrate concepts when helpful
-
-4. Source Citations:
-- When referencing information from the provided sources, include a citation using the format [X] where X is the source number
-- DO NOT include a sources section at the end of your response - this will be handled separately
+- DO NOT use numbered citations like [1], [2], etc. in your response
 
 Example structure:
 <h1>Comprehensive Topic Overview</h1>
-<p>Thorough introduction with <strong>key terms</strong> highlighted [1].</p>
+<p>Thorough introduction with <strong>key terms</strong> highlighted.</p>
 
 <div class="section technology">
     <h2>Major Section</h2>
-    <p>Detailed explanation [2].</p>
+    <p>Detailed explanation.</p>
     
     <h3>Subsection</h3>
     <ul>
-        <li>Detailed point 1 [3]</li>
-        <li>Detailed point 2 [1]</li>
+        <li>Detailed point 1</li>
+        <li>Detailed point 2</li>
     </ul>
 </div>"""
 
@@ -1075,8 +1063,8 @@ Please provide a comprehensive answer to this question based on the provided con
 Guidelines:
 1. Be thorough and well-structured
 2. Use appropriate HTML formatting for readability
-3. Cite sources using [X] format
-4. DO NOT include a sources section at the end - this will be handled separately"""
+3. DO NOT include a sources section at the end - this will be handled separately
+4. DO NOT use numbered citations like [1], [2], etc. in your response"""
             # Determine which prompt to use based on depth and conciseness for non-root questions
             elif concise or depth >= 1:
                 # Use a more concise prompt for leaf nodes
@@ -1100,21 +1088,18 @@ Format your response with semantic HTML tags for optimal readability and structu
 - Use bullet points whenever possible
 - Limit to 1-2 short paragraphs per section
 - Avoid repetition and unnecessary details
-
-4. Source Citations:
-- When referencing information from the provided sources, include a citation using the format [X] where X is the source number
-- DO NOT include a sources section at the end of your response - this will be handled separately
 - Focus on making your answer as concise and informative as possible
+- DO NOT use numbered citations like [1], [2], etc. in your response
 
 Example structure:
 <h1>Main Topic</h1>
-<p>Brief introduction with <strong>key term</strong> highlighted [1].</p>
+<p>Brief introduction with <strong>key term</strong> highlighted.</p>
 
 <div class="section technology">
     <h2>Key Points</h2>
     <ul>
-        <li>Concise point 1 [2]</li>
-        <li>Concise point 2 [1]</li>
+        <li>Concise point 1</li>
+        <li>Concise point 2</li>
     </ul>
 </div>"""
 
@@ -1129,8 +1114,8 @@ Guidelines:
 1. Keep your answer brief and to the point
 2. Use bullet points and short paragraphs
 3. Include only the most essential information
-4. Cite sources using [X] format
-5. DO NOT include a sources section at the end - this will be handled separately"""
+4. DO NOT include a sources section at the end - this will be handled separately
+5. DO NOT use numbered citations like [1], [2], etc. in your response"""
             else:
                 # Use a more comprehensive prompt for root node
                 system_message = """You are a helpful research assistant that provides comprehensive, well-structured answers based on provided context.
@@ -1153,23 +1138,20 @@ Format your response with semantic HTML tags for optimal readability and structu
 - Use bullet points for lists of features, benefits, or steps
 - Break down complex topics into digestible sections
 - Use examples to illustrate concepts when helpful
-
-4. Source Citations:
-- When referencing information from the provided sources, include a citation using the format [X] where X is the source number
-- DO NOT include a sources section at the end of your response - this will be handled separately
+- DO NOT use numbered citations like [1], [2], etc. in your response
 
 Example structure:
 <h1>Comprehensive Topic Overview</h1>
-<p>Thorough introduction with <strong>key terms</strong> highlighted [1].</p>
+<p>Thorough introduction with <strong>key terms</strong> highlighted.</p>
 
 <div class="section technology">
     <h2>Major Section</h2>
-    <p>Detailed explanation [2].</p>
+    <p>Detailed explanation.</p>
     
     <h3>Subsection</h3>
     <ul>
-        <li>Detailed point 1 [3]</li>
-        <li>Detailed point 2 [1]</li>
+        <li>Detailed point 1</li>
+        <li>Detailed point 2</li>
     </ul>
 </div>"""
 
@@ -1183,8 +1165,7 @@ Please provide a comprehensive answer to this question based on the provided con
 Guidelines:
 1. Be thorough and well-structured
 2. Use appropriate HTML formatting for readability
-3. Cite sources using [X] format
-4. DO NOT include a sources section at the end - this will be handled separately"""
+3. DO NOT include a sources section at the end - this will be handled separately"""
             
             print(f"  Sending request to Anthropic Claude with prompt length {len(prompt)} characters...")
             
