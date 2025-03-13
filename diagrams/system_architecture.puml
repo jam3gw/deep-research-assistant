@@ -1,0 +1,85 @@
+@startuml System Architecture
+
+skinparam {
+  BackgroundColor white
+  ArrowColor #2C3E50
+  BorderColor #2C3E50
+  ComponentBorderColor #2C3E50
+  ComponentBackgroundColor #ECF0F1
+  DatabaseBackgroundColor #ECF0F1
+  DatabaseBorderColor #2C3E50
+  ActorBorderColor #2C3E50
+  ActorBackgroundColor #ECF0F1
+  CloudBorderColor #2C3E50
+  CloudBackgroundColor #ECF0F1
+  NoteBackgroundColor #FFCC00
+  NoteBorderColor #2C3E50
+}
+
+title Personal Research Assistant - System Architecture
+
+actor User
+cloud "AWS Lambda" {
+  package "Research Generator" {
+    component [RAG Engine] as RAGEngine
+    component [Knowledge Base Manager] as KBManager
+    component [Tree Visualizer] as TreeVis
+    database "FAISS Vector DB" as VectorDB
+  }
+}
+
+cloud "AI Services" {
+  [Anthropic Claude] as Claude
+  [OpenAI Embeddings] as OpenAI
+  [Brave Search API] as Brave
+}
+
+cloud "AWS Services" {
+  [SSM Parameter Store] as SSM
+  [S3 Bucket] as S3
+}
+
+User --> [Web Interface] : Research Query
+[Web Interface] --> RAGEngine : Sends Query
+RAGEngine --> KBManager : Requests Knowledge
+KBManager --> Brave : Web Search
+Brave --> KBManager : Search Results
+KBManager --> RAGEngine : Relevant Content
+RAGEngine --> OpenAI : Generate Embeddings
+OpenAI --> RAGEngine : Vector Embeddings
+RAGEngine --> VectorDB : Store/Retrieve Vectors
+RAGEngine --> Claude : Generate Sub-Questions
+Claude --> RAGEngine : Question Tree
+RAGEngine --> Claude : Generate Answers
+Claude --> RAGEngine : Detailed Answers
+RAGEngine --> TreeVis : Format Results
+TreeVis --> [Web Interface] : Structured Response
+[Web Interface] --> User : Interactive Results
+
+note right of RAGEngine
+  Core component that orchestrates:
+  - Question decomposition
+  - Knowledge retrieval
+  - Answer generation
+end note
+
+note right of Claude
+  Used for:
+  - Question analysis
+  - Sub-question generation
+  - Answer synthesis
+end note
+
+note right of OpenAI
+  Used for:
+  - Text embedding generation
+  - Vector similarity search
+end note
+
+note right of Brave
+  Used for:
+  - Real-time web search
+  - Source retrieval
+end note
+
+@enduml 

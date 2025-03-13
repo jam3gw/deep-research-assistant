@@ -1,0 +1,92 @@
+@startuml AI Integration Sequence
+
+skinparam {
+  BackgroundColor white
+  ArrowColor #2C3E50
+  BorderColor #2C3E50
+  ParticipantBorderColor #2C3E50
+  ParticipantBackgroundColor #ECF0F1
+  DatabaseBackgroundColor #ECF0F1
+  DatabaseBorderColor #2C3E50
+  ActorBorderColor #2C3E50
+  ActorBackgroundColor #ECF0F1
+  LifeLineBorderColor #2C3E50
+  LifeLineBackgroundColor #ECF0F1
+  NoteBackgroundColor #FFCC00
+  NoteBorderColor #2C3E50
+  SequenceGroupBorderColor #2C3E50
+  SequenceGroupBackgroundColor #ECF0F1
+}
+
+title AI Service Integration - Sequence Flow
+
+actor "User" as User
+participant "Web Interface" as WebUI
+participant "RAG Engine" as RAGEngine
+participant "Knowledge Base Manager" as KBManager
+participant "Tree Visualizer" as TreeVis
+database "FAISS Vector DB" as VectorDB
+participant "Anthropic Claude" as Claude #D5E8D4
+participant "OpenAI Embeddings" as OpenAI #DAE8FC
+participant "Brave Search API" as Brave #FFE6CC
+
+autonumber
+
+== Query Submission ==
+User -> WebUI: Submit research query
+WebUI -> RAGEngine: Forward query
+
+== Question Analysis ==
+RAGEngine -> Claude: Assess question complexity
+note right: Using claude-3-5-sonnet-20240620
+Claude --> RAGEngine: Return complexity assessment (simple/medium/complex)
+
+== Knowledge Retrieval ==
+RAGEngine -> OpenAI: Generate embeddings for query
+note right: Using text-embedding-3-small
+OpenAI --> RAGEngine: Return query embeddings
+RAGEngine -> VectorDB: Search for relevant documents
+VectorDB --> RAGEngine: Return matching documents
+
+alt Insufficient Documents Found
+    RAGEngine -> KBManager: Request additional knowledge
+    KBManager -> Brave: Perform web search with query
+    note right: Real-time web content retrieval
+    Brave --> KBManager: Return search results with metadata
+    KBManager -> KBManager: Process and structure search results
+    KBManager -> OpenAI: Generate embeddings for content
+    OpenAI --> KBManager: Return vector embeddings
+    KBManager -> VectorDB: Store vectors and content
+    KBManager --> RAGEngine: Knowledge acquisition complete
+    
+    RAGEngine -> VectorDB: Search again for relevant documents
+    VectorDB --> RAGEngine: Return expanded matching documents
+end
+
+== Question Decomposition ==
+alt Medium or Complex Question
+    RAGEngine -> Claude: Generate sub-questions with context
+    Claude --> RAGEngine: Return 2-5 sub-questions based on complexity
+    
+    loop For Each Sub-Question
+        RAGEngine -> RAGEngine: Recursive processing (depth+1)
+        note right: Repeat the entire process\nfor each sub-question
+    end
+end
+
+== Answer Generation ==
+RAGEngine -> Claude: Generate answer with context and sources
+Claude --> RAGEngine: Return detailed answer with source citations
+
+== Summary Creation (for parent nodes) ==
+alt Has Child Nodes
+    RAGEngine -> Claude: Synthesize summary from child answers
+    Claude --> RAGEngine: Return synthesized parent answer
+end
+
+== Result Formatting ==
+RAGEngine -> TreeVis: Format question tree with answers
+TreeVis --> WebUI: Return structured response
+WebUI --> User: Display interactive results with source attribution
+
+@enduml 

@@ -1,0 +1,77 @@
+@startuml RAG Process
+
+skinparam {
+  BackgroundColor white
+  ArrowColor #2C3E50
+  BorderColor #2C3E50
+  ComponentBorderColor #2C3E50
+  ComponentBackgroundColor #ECF0F1
+  DatabaseBackgroundColor #ECF0F1
+  DatabaseBorderColor #2C3E50
+  ActorBorderColor #2C3E50
+  ActorBackgroundColor #ECF0F1
+  CloudBorderColor #2C3E50
+  CloudBackgroundColor #ECF0F1
+  NoteBackgroundColor #FFCC00
+  NoteBorderColor #2C3E50
+}
+
+title Retrieval-Augmented Generation (RAG) Process
+
+actor User
+participant "RAG Engine" as RAG
+participant "Knowledge Base Manager" as KB
+participant "Brave Search API" as Brave
+participant "OpenAI Embeddings" as OpenAI
+participant "FAISS Vector DB" as FAISS
+participant "Anthropic Claude" as Claude
+
+autonumber
+
+User -> RAG: Submit research query
+
+== Knowledge Retrieval Phase ==
+
+RAG -> OpenAI: Generate embeddings for query
+OpenAI --> RAG: Return query embeddings
+RAG -> FAISS: Search for relevant documents
+FAISS --> RAG: Return matching documents
+
+alt Insufficient Documents Found
+    RAG -> KB: Request additional knowledge
+    KB -> Brave: Perform web search with query
+    Brave --> KB: Return search results
+    KB -> KB: Process and structure search results
+    KB -> OpenAI: Generate embeddings for content
+    OpenAI --> KB: Return vector embeddings
+    KB -> FAISS: Store vectors and content
+    KB --> RAG: Knowledge acquisition complete
+    
+    RAG -> OpenAI: Search again with query embeddings
+    OpenAI --> RAG: Updated query embeddings
+    RAG -> FAISS: Search for relevant documents
+    FAISS --> RAG: Return expanded matching documents
+end
+
+== Context Processing Phase ==
+
+RAG -> RAG: Extract content from relevant documents
+RAG -> RAG: Format context with source attribution
+RAG -> RAG: Prepare prompt with context and query
+
+== Answer Generation Phase ==
+
+RAG -> Claude: Send prompt with context and query
+note right: Includes source information
+Claude -> Claude: Generate comprehensive answer
+Claude --> RAG: Return answer with source citations
+
+== Source Attribution Phase ==
+
+RAG -> RAG: Extract source citations from answer
+RAG -> RAG: Deduplicate and format sources
+RAG -> RAG: Attach sources to answer
+
+RAG --> User: Return answer with source attribution
+
+@enduml 

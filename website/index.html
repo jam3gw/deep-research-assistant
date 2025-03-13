@@ -865,6 +865,122 @@
             margin: 0;
         }
 
+        /* New styles for sequence diagram section */
+        .description-text {
+            margin-bottom: 30px;
+        }
+
+        .description-text p {
+            color: #475569;
+            line-height: 1.7;
+            margin-bottom: 15px;
+            font-size: 1.05rem;
+        }
+
+        .sequence-diagram {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e2e8f0;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .full-width-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .full-width-image:hover {
+            transform: scale(1.02);
+        }
+
+        .zoom-hint {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        /* Image Modal Styles */
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            padding-top: 50px;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90vh;
+            border-radius: 8px;
+        }
+
+        #modal-caption {
+            margin: auto;
+            display: block;
+            width: 80%;
+            max-width: 700px;
+            text-align: center;
+            color: white;
+            padding: 20px 0;
+            font-size: 1.1rem;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+
+        .close-modal:hover,
+        .close-modal:focus {
+            color: #bbb;
+            text-decoration: none;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                max-width: 95%;
+            }
+
+            .close-modal {
+                top: 10px;
+                right: 20px;
+                font-size: 30px;
+            }
+
+            .sequence-diagram {
+                padding: 10px;
+                overflow-x: auto;
+            }
+
+            .description-text p {
+                font-size: 1rem;
+            }
+        }
+
         /* Architecture Section Styles */
         .architecture-section {
             padding: 0;
@@ -1028,100 +1144,25 @@
         </header>
 
         <main>
-            <section class="architecture-section">
-                <!-- AI Components Layer -->
-                <div class="tech-sequence">
-                    <div class="component-grid">
-                        <div class="tech-component">
-                            <div class="tech-header">Input Processing</div>
-                            <div class="tech-details">
-                                <code>Claude (Anthropic)</code>
-                                <ul>
-                                    <li>Question analysis</li>
-                                    <li>Task decomposition</li>
-                                    <li>Research planning</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="tech-component">
-                            <div class="tech-header">Knowledge Retrieval</div>
-                            <div class="tech-details">
-                                <code>Brave Search API</code>
-                                <ul>
-                                    <li>Web content search</li>
-                                    <li>Source filtering</li>
-                                    <li>Data extraction</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="tech-component">
-                            <div class="tech-header">Vector Processing</div>
-                            <div class="tech-details">
-                                <code>OpenAI + FAISS</code>
-                                <ul>
-                                    <li>Text embedding</li>
-                                    <li>Similarity search</li>
-                                    <li>Context ranking</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="tech-component">
-                            <div class="tech-header">Answer Generation</div>
-                            <div class="tech-details">
-                                <code>Claude + RAG</code>
-                                <ul>
-                                    <li>Context fusion</li>
-                                    <li>Answer synthesis</li>
-                                    <li>Tree assembly</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             <section class="service-description">
                 <div class="description-content">
                     <h3>How It Works</h3>
-                    <div class="description-grid">
-                        <div class="description-item">
-                            <h4>1. Question Analysis & Decomposition</h4>
-                            <p>When you submit a research question, Claude first analyzes its complexity and scope.
-                                Complex questions are automatically broken down into smaller, more manageable
-                                sub-questions using a sophisticated decomposition algorithm. This process creates a
-                                hierarchical tree structure, ensuring that each aspect of your question is thoroughly
-                                addressed.</p>
-                        </div>
-                        <div class="description-item">
-                            <h4>2. Dynamic Knowledge Gathering</h4>
-                            <p>For each sub-question, the system uses Brave Search API to gather relevant, up-to-date
-                                information from across the web. The search process is guided by context-aware filters
-                                that prioritize reliable sources and recent information. This ensures that your answers
-                                are based on current and accurate data.</p>
-                        </div>
-                        <div class="description-item">
-                            <h4>3. Semantic Processing</h4>
-                            <p>Retrieved content is processed using OpenAI's advanced embedding technology and stored in
-                                a FAISS vector database. This allows for semantic similarity matching, helping to
-                                identify the most relevant information for each sub-question. The system can understand
-                                context and relationships between different pieces of information, going beyond simple
-                                keyword matching.</p>
-                        </div>
-                        <div class="description-item">
-                            <h4>4. Answer Synthesis</h4>
-                            <p>Claude then processes the organized information using a sophisticated RAG
-                                (Retrieval-Augmented Generation) pipeline. This combines the retrieved knowledge with
-                                its own understanding to generate comprehensive, well-structured answers. Each
-                                sub-question is answered individually, maintaining clear logical connections.</p>
-                        </div>
-                        <div class="description-item">
-                            <h4>5. Tree Assembly & Visualization</h4>
-                            <p>Finally, the system assembles all components into an interactive question tree. This
-                                visualization shows how your original question was broken down and answered, allowing
-                                you to explore each branch of research. The tree structure helps you understand the
-                                relationship between different aspects of your query and how they contribute to the
-                                complete answer.</p>
-                        </div>
+                    <div class="description-text">
+                        <p>The Deep Research Assistant uses a sophisticated AI-powered pipeline to break down complex
+                            research questions into manageable sub-questions, gather relevant information, and
+                            synthesize comprehensive answers with source attribution.</p>
+                        <p>At its core, the system leverages three powerful AI components working in concert:
+                            Anthropic's Claude for natural language understanding and generation, OpenAI's embeddings
+                            for semantic search capabilities, and Brave Search for real-time web content retrieval. This
+                            integration enables a recursive question decomposition approach that creates a hierarchical
+                            tree of knowledge, ensuring thorough coverage of your research topic.</p>
+                        <p>The sequence diagram below illustrates the complete process flow from query submission to
+                            final answer generation:</p>
+                    </div>
+                    <div class="sequence-diagram">
+                        <img src="images/sequence_diagram.png" alt="AI Integration Sequence Diagram"
+                            class="full-width-image" id="sequence-diagram-img" onclick="openImageModal(this.src)">
+                        <div class="zoom-hint"><i class="fas fa-search-plus"></i> Click to zoom</div>
                     </div>
                 </div>
             </section>
@@ -1248,7 +1289,55 @@
                 });
             });
         });
+
+        // Image modal functions
+        function openImageModal(imgSrc) {
+            const modal = document.getElementById('image-modal');
+            const modalImg = document.getElementById('modal-img');
+            modal.style.display = 'block';
+            modalImg.src = imgSrc;
+
+            // Prevent scrolling on the body when modal is open
+            document.body.style.overflow = 'hidden';
+
+            // Add keyboard event listener for Escape key
+            document.addEventListener('keydown', handleEscapeKey);
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('image-modal');
+            modal.style.display = 'none';
+
+            // Re-enable scrolling on the body
+            document.body.style.overflow = 'auto';
+
+            // Remove keyboard event listener
+            document.removeEventListener('keydown', handleEscapeKey);
+        }
+
+        function handleEscapeKey(event) {
+            if (event.key === 'Escape') {
+                closeImageModal();
+            }
+        }
+
+        // Close modal when clicking outside the image
+        document.addEventListener('DOMContentLoaded', function () {
+            const modal = document.getElementById('image-modal');
+            modal.addEventListener('click', function (event) {
+                if (event.target === modal) {
+                    closeImageModal();
+                }
+            });
+        });
     </script>
+
+    <!-- Image Modal for zooming -->
+    <div id="image-modal" class="image-modal">
+        <span class="close-modal" onclick="closeImageModal()">&times;</span>
+        <img class="modal-content" id="modal-img">
+        <div id="modal-caption">AI Integration Sequence Diagram</div>
+    </div>
 </body>
 
 </html>
