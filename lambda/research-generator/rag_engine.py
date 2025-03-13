@@ -600,17 +600,17 @@ Guidelines:
         elif complexity_level == 2:
             # Simple questions get 2 sub-questions
             num_sub_questions = "2"
-            print(f"  Moderate question (level 2) detected. Generating {num_sub_questions} sub-questions.")
+            print(f"  Simple question (level 2) detected. Generating {num_sub_questions} sub-questions.")
         elif complexity_level == 3:
-            # Simple questions get 2 sub-questions
+            # Simple questions get 3 sub-questions
             num_sub_questions = "3"
             print(f"  Moderate question (level 3) detected. Generating {num_sub_questions} sub-questions.")
         elif complexity_level == 4:
-            # Moderate questions get 3 sub-questions
+            # Moderate questions get 4 sub-questions
             num_sub_questions = "4"
             print(f"  Complex question (level 4) detected. Generating {num_sub_questions} sub-questions.")
         else:
-            # Complex questions get 4 sub-questions
+            # Complex questions get 5 sub-questions
             num_sub_questions = "5"
             print(f"  Very complex question (level 5) detected. Generating {num_sub_questions} sub-questions.")
         
