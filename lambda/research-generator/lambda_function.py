@@ -19,6 +19,12 @@ def lambda_handler(event, context):
     if event.get('httpMethod') == 'OPTIONS':
         return build_response(200, {}, not is_function_url)
     
+    # Set up timeout monitoring
+    start_time = time.time()
+    # Get the remaining time in milliseconds and convert to seconds
+    # Leave a 10-second buffer to ensure we can return a proper response
+    timeout_buffer = 10  # seconds
+    
     # Get API keys from environment variables
     anthropic_key_name = os.environ['ANTHROPIC_API_KEY_SECRET_NAME']
     openai_key_name = os.environ['OPENAI_API_KEY_SECRET_NAME']
@@ -66,8 +72,30 @@ def lambda_handler(event, context):
             start_time = time.time()
             try:
                 print(f"Starting answer generation for query: '{query}'")
+                
+                # Check if we have enough time remaining
+                if context and hasattr(context, 'get_remaining_time_in_millis'):
+                    remaining_ms = context.get_remaining_time_in_millis()
+                    # If we have less than 30 seconds remaining, return early with a timeout error
+                    if remaining_ms < 30000:  # 30 seconds in milliseconds
+                        print(f"WARNING: Only {remaining_ms/1000} seconds remaining. Returning early to avoid timeout.")
+                        return build_response(408, {
+                            'error': 'The request would exceed the Lambda timeout. Please try a more specific question.'
+                        }, not is_function_url)
+                
                 question_tree = rag.generate_answer_with_tree(query, client, brave_key)
                 print("Answer generation completed successfully")
+                
+                # Check if we're close to timeout after generating the answer
+                if context and hasattr(context, 'get_remaining_time_in_millis'):
+                    remaining_ms = context.get_remaining_time_in_millis()
+                    if remaining_ms < timeout_buffer * 1000:  # Convert buffer to milliseconds
+                        print(f"WARNING: Only {remaining_ms/1000} seconds remaining after answer generation. Returning simplified response.")
+                        # Return a simplified response with just the answer to avoid timeout during response formatting
+                        return build_response(200, {
+                            'explanation': question_tree.get('answer', 'Answer generated but response time limited. Please try a more specific question.'),
+                            'timeout_warning': True
+                        }, not is_function_url)
             except Exception as e:
                 print(f"ERROR during answer generation: {str(e)}")
                 print(f"Exception type: {type(e).__name__}")
