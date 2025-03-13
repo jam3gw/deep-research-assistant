@@ -17,6 +17,30 @@ from utils import extract_content
 from knowledge_base import KnowledgeBaseManager
 import time
 import traceback
+import random
+
+def retry_with_exponential_backoff(initial_delay=1, exponential_base=2, jitter=True, max_retries=10, errors=(Exception,)):
+    """Retry a function with exponential backoff."""
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            num_retries = 0
+            delay = initial_delay
+            
+            while True:
+                try:
+                    return func(*args, **kwargs)
+                except errors as e:
+                    num_retries += 1
+                    if num_retries > max_retries:
+                        print(f"Maximum retries ({max_retries}) exceeded.")
+                        raise e
+                    
+                    delay *= exponential_base * (1 + jitter * random.random())
+                    print(f"Retrying in {delay:.2f} seconds... (Attempt {num_retries}/{max_retries})")
+                    print(f"Error: {str(e)}")
+                    time.sleep(delay)
+        return wrapper
+    return decorator
 
 def get_token_limit_for_depth(base_limit: int, depth: int) -> int:
     """
@@ -35,10 +59,10 @@ def get_token_limit_for_depth(base_limit: int, depth: int) -> int:
     """
     if depth >= 2:
         # Leaf nodes - more concise (60% of base)
-        return int(base_limit * 0.6)
+        return 500
     elif depth == 1:
         # Intermediate nodes - moderate detail (80% of base)
-        return int(base_limit * 0.8)
+        return 800
     else:
         # Root node - full detail
         return base_limit
@@ -423,19 +447,83 @@ A 'complex' question:
 Respond with ONLY ONE of these three words: 'simple', 'medium', or 'complex'."""
 
         # Get complexity assessment
-        complexity_message = client.messages.create(
-            model=DEFAULT_MODEL,
-            max_tokens=10,  # Very short response needed
-            temperature=0,
-            system=system_message_complexity,
-            messages=[
-                {"role": "user", "content": complexity_prompt}
-            ]
-        )
-        
-        complexity = extract_content(complexity_message).strip().lower()
-        print(f"  Question complexity assessed as: {complexity}")
-        
+        try:
+            @retry_with_exponential_backoff(
+                initial_delay=2,
+                exponential_base=2,
+                jitter=True,
+                max_retries=5,
+                errors=(Exception,)
+            )
+            def assess_complexity_with_retry():
+                return client.messages.create(
+                    model=DEFAULT_MODEL,
+                    max_tokens=10,  # Very short response needed
+                    temperature=0,
+                    system=system_message_complexity,
+                    messages=[
+                        {"role": "user", "content": complexity_prompt}
+                    ]
+                )
+            
+            # Call the function with retry logic
+            complexity_message = assess_complexity_with_retry()
+            
+            complexity = extract_content(complexity_message).strip().lower()
+            print(f"  Question complexity assessed as: {complexity}")
+        except Exception as e:
+            print(f"ERROR during complexity assessment: {str(e)}. Using standard comprehensive prompt.")
+            # Fall back to standard comprehensive prompt
+            system_message_complexity = """You are a helpful research assistant that provides comprehensive, well-structured answers based on provided context.
+Format your response with semantic HTML tags for optimal readability and structure:
+
+1. Document Structure:
+- Use <h1> for the main title/topic
+- Use <h2> for major sections
+- Use <h3> for subsections when needed
+
+2. Content Sections:
+- Wrap each major section in <div class="section technology"> or <div class="section limitation"> based on content type
+- Use <p> for regular paragraphs
+- Use <strong> for emphasizing important terms or concepts
+- Use <ul> and <li> for lists
+- Use <blockquote> for notable quotes or definitions
+
+3. Formatting Guidelines:
+- Be comprehensive but clear
+- Use bullet points for lists of features, benefits, or steps
+- Break down complex topics into digestible sections
+- Use examples to illustrate concepts when helpful
+- DO NOT use numbered citations like [1], [2], etc. in your response
+
+Example structure:
+<h1>Comprehensive Topic Overview</h1>
+<p>Thorough introduction with <strong>key terms</strong> highlighted.</p>
+
+<div class="section technology">
+    <h2>Major Section</h2>
+    <p>Detailed explanation.</p>
+    
+    <h3>Subsection</h3>
+    <ul>
+        <li>Detailed point 1</li>
+        <li>Detailed point 2</li>
+    </ul>
+</div>"""
+
+            complexity_prompt = f"""Context:
+{context}
+
+Question: {question}
+
+Please provide a comprehensive answer to this question based on the provided context.
+
+Guidelines:
+1. Be thorough and well-structured
+2. Use appropriate HTML formatting for readability
+3. DO NOT include a sources section at the end - this will be handled separately
+4. DO NOT use numbered citations like [1], [2], etc. in your response"""
+
         # Determine number of sub-questions based on complexity
         if complexity == "simple":
             # For simple questions, we might not need sub-questions at all
@@ -473,15 +561,26 @@ IMPORTANT:
 - Ensure sub-questions can be answered concisely
 - Do not include any other text, numbering, or explanations"""
 
-        message = client.messages.create(
-            model=DEFAULT_MODEL,
-            max_tokens=DEFAULT_EVALUATION_MAX_TOKENS,
-            temperature=0,
-            system=system_message,
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
+        @retry_with_exponential_backoff(
+            initial_delay=2,
+            exponential_base=2,
+            jitter=True,
+            max_retries=5,
+            errors=(Exception,)
         )
+        def generate_sub_questions_with_retry():
+            return client.messages.create(
+                model=DEFAULT_MODEL,
+                max_tokens=DEFAULT_EVALUATION_MAX_TOKENS,
+                temperature=0,
+                system=system_message,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+        
+        # Call the function with retry logic
+        message = generate_sub_questions_with_retry()
         
         # Extract sub-questions from response and clean up
         response = extract_content(message)
@@ -714,6 +813,7 @@ IMPORTANT:
                 # Process sub-questions recursively
                 print(f"  Processing {len(sub_questions)} sub-questions recursively.")
                 node['needs_breakdown'] = True
+                
                 for i, sub_q in enumerate(sub_questions):
                     try:
                         print(f"  Processing sub-question {i+1}/{len(sub_questions)} at depth {depth+1}")
@@ -736,7 +836,9 @@ IMPORTANT:
                             'depth': depth + 1,
                             'error': str(e),
                             'parent_question': question,
-                            'answer': f"Error processing this question: {str(e)}"
+                            'answer': f"Error processing this question: {str(e)}",
+                            'children': [],  # Add empty children list
+                            'needs_breakdown': False  # Mark as not needing breakdown
                         }
                         node['children'].append(error_node)
                 
@@ -865,13 +967,7 @@ IMPORTANT:
             
             # Adjust token limit based on depth
             token_limit = get_token_limit_for_depth(DEFAULT_ANSWER_MAX_TOKENS, depth)
-            
-            # Reserve tokens for sources section
-            sources_tokens = estimate_sources_tokens(sources)
-            answer_tokens = token_limit - sources_tokens
-            
-            print(f"  Token allocation: {answer_tokens} for answer, {sources_tokens} reserved for sources.")
-            
+     
             # First, check if this is a simple question at depth 0 (root level)
             # For simple questions at root level, we want a direct but comprehensive answer
             if depth == 0 and not concise:
@@ -913,15 +1009,26 @@ Respond with ONLY ONE of these three words: 'simple', 'medium', or 'complex'."""
 
                 # Get complexity assessment
                 try:
-                    complexity_message = client.messages.create(
-                        model=DEFAULT_MODEL,
-                        max_tokens=10,  # Very short response needed
-                        temperature=0,
-                        system=system_message_complexity,
-                        messages=[
-                            {"role": "user", "content": complexity_prompt}
-                        ]
+                    @retry_with_exponential_backoff(
+                        initial_delay=2,
+                        exponential_base=2,
+                        jitter=True,
+                        max_retries=5,
+                        errors=(Exception,)
                     )
+                    def assess_complexity_with_retry():
+                        return client.messages.create(
+                            model=DEFAULT_MODEL,
+                            max_tokens=10,  # Very short response needed
+                            temperature=0,
+                            system=system_message_complexity,
+                            messages=[
+                                {"role": "user", "content": complexity_prompt}
+                            ]
+                        )
+                    
+                    # Call the function with retry logic
+                    complexity_message = assess_complexity_with_retry()
                     
                     complexity = extract_content(complexity_message).strip().lower()
                     print(f"  Question complexity assessed as: {complexity}")
@@ -1170,18 +1277,29 @@ Guidelines:
             print(f"  Sending request to Anthropic Claude with prompt length {len(prompt)} characters...")
             
             try:
-                # Generate answer using Anthropic Claude
-                response = client.messages.create(
-                    model=DEFAULT_MODEL,
-                    max_tokens=token_limit,
-                    system=system_message,
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": prompt
-                        }
-                    ]
+                # Generate answer using Anthropic Claude with retry logic
+                @retry_with_exponential_backoff(
+                    initial_delay=2,
+                    exponential_base=2,
+                    jitter=True,
+                    max_retries=5,
+                    errors=(Exception,)
                 )
+                def call_anthropic_with_retry():
+                    return client.messages.create(
+                        model=DEFAULT_MODEL,
+                        max_tokens=token_limit,
+                        system=system_message,
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": prompt
+                            }
+                        ]
+                    )
+                
+                # Call the function with retry logic
+                response = call_anthropic_with_retry()
                 
                 answer = response.content[0].text
                 print(f"  Received answer from Claude with length {len(answer)} characters.")
