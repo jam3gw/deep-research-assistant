@@ -176,8 +176,51 @@
     <!-- Load tree visualization -->
     <script src="js/tree-visualizer.js"></script>
 
-    <!-- Load test utilities -->
-    <script src="js/test-utils.js"></script>
+    <!-- Test utilities inline (replacing external test-utils.js) -->
+    <script>
+        // Initialize test data
+        window.testData = {
+            // Simple tree with basic structure
+            simple: {
+                tree: {
+                    question: "What are the key differences between supervised and unsupervised learning?",
+                    answer: "Supervised and unsupervised learning differ primarily in their use of labeled data, learning approach, applications, and evaluation methods.",
+                    depth: 0,
+                    id: "root",
+                    children: [
+                        {
+                            question: "How does supervised learning work?",
+                            answer: "Supervised learning uses labeled training data with input-output pairs.",
+                            depth: 1,
+                            id: "node-1",
+                            children: [
+                                {
+                                    question: "What are common supervised learning algorithms?",
+                                    answer: "Common supervised learning algorithms include Linear Regression, Logistic Regression, Support Vector Machines (SVM), Decision Trees, Random Forests, and Neural Networks.",
+                                    depth: 2,
+                                    id: "node-1-1",
+                                    children: []
+                                }
+                            ]
+                        },
+                        {
+                            question: "How does unsupervised learning work?",
+                            answer: "Unsupervised learning works with unlabeled data, identifying patterns and structures without predefined outputs.",
+                            depth: 1,
+                            id: "node-2",
+                            children: []
+                        }
+                    ]
+                },
+                metadata: {
+                    total_nodes: 4,
+                    max_depth: 2,
+                    processing_time: "1.5 seconds"
+                }
+            },
+            // Add more test data as needed
+        };
+    </script>
 
     <script>
         // Override console.log to capture output
