@@ -136,16 +136,18 @@ class RAGEngine:
         self.comprehensive_format = """Format your response with semantic HTML tags for optimal readability and structure:
 
 1. Document Structure:
-- Use <h1> for the main title/topic
-- Use <h2> for major sections
-- Use <h3> for subsections when needed
+- Use <h1 class="title"> for the main title/topic
+- Use <h2 class="section-heading"> for major sections
+- Use <h3 class="subsection-heading"> for subsections when needed
 
 2. Content Sections:
-- Wrap each major section in <div class="section technology"> or <div class="section limitation"> based on content type
-- Use <p> for regular paragraphs
+- Wrap each major section in <section class="content-section"> with a data-type attribute (e.g., data-type="technology" or data-type="limitation")
+- Use <p class="body-text"> for regular paragraphs
 - Use <strong> for emphasizing important terms or concepts
-- Use <ul> and <li> for lists
-- Use <blockquote> for notable quotes or definitions
+- Use <span class="keyword"> for key terminology that should stand out
+- Use <ul class="bullet-list"> and <li> for lists
+- Use <blockquote class="quote"> for notable quotes or definitions
+- Use <div class="example-box"> to highlight examples
 
 3. Formatting Guidelines:
 - Be comprehensive but clear
@@ -155,28 +157,33 @@ class RAGEngine:
 - DO NOT use numbered citations like [1], [2], etc. in your response
 
 Example structure:
-<h1>Comprehensive Topic Overview</h1>
-<p>Thorough introduction with <strong>key terms</strong> highlighted.</p>
+<h1 class="title">Comprehensive Topic Overview</h1>
+<p class="body-text">Thorough introduction with <strong>key terms</strong> highlighted and <span class="keyword">important concepts</span> marked.</p>
 
-<div class="section technology">
-    <h2>Major Section</h2>
-    <p>Detailed explanation.</p>
+<section class="content-section" data-type="technology">
+    <h2 class="section-heading">Major Section</h2>
+    <p class="body-text">Detailed explanation.</p>
     
-    <h3>Subsection</h3>
-    <ul>
+    <h3 class="subsection-heading">Subsection</h3>
+    <ul class="bullet-list">
         <li>Detailed point 1</li>
         <li>Detailed point 2</li>
     </ul>
-</div>"""
+    
+    <div class="example-box">
+        <p>Example illustrating the concept.</p>
+    </div>
+</section>"""
 
         # Simple format for direct answers
         self.simple_format = """Format your response with semantic HTML tags for optimal readability and structure:
 
 1. Document Structure:
-- Use <h1> for the main title/topic
-- Use <p> for regular paragraphs
+- Use <h1 class="title"> for the main title/topic
+- Use <p class="body-text"> for regular paragraphs
 - Use <strong> for emphasizing important terms or concepts
-- Use <ul> and <li> for lists when appropriate
+- Use <span class="keyword"> for key terminology
+- Use <ul class="bullet-list"> and <li> for lists when appropriate
 
 2. Formatting Guidelines:
 - Be direct and to the point
@@ -185,9 +192,9 @@ Example structure:
 - Include the most important information first
 
 Example structure:
-<h1>Direct Answer to Question</h1>
-<p>Clear explanation with <strong>key terms</strong> highlighted.</p>
-<p>Additional relevant information if needed.</p>"""
+<h1 class="title">Direct Answer to Question</h1>
+<p class="body-text">Clear explanation with <strong>key terms</strong> highlighted and <span class="keyword">important concepts</span> marked.</p>
+<p class="body-text">Additional relevant information if needed.</p>"""
 
         # Complexity assessment system message
         self.system_message_complexity = """You are an AI assistant that analyzes questions to determine their complexity.
