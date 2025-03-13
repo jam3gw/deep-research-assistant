@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client-Side Tree Visualization Demo</title>
+    <!-- D3.js for tree visualization -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            line-height: 1.5;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        h1,
+        h2 {
+            color: #2c3e50;
+        }
+
+        .tree-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .node {
+            margin: 10px 0;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .question-node {
+            background-color: #f5f8ff;
+            border-left: 4px solid #4a6fa5;
+        }
+
+        .question-node[data-depth="0"] {
+            border-left-color: #2c3e50;
+            background-color: #ecf0f1;
+            margin-bottom: 20px;
+        }
+
+        .question-node[data-depth="1"] {
+            border-left-color: #3498db;
+            background-color: #e8f4fc;
+            margin-left: 0;
+            margin-bottom: 15px;
+        }
+
+        .question-node[data-depth="2"] {
+            border-left-color: #9b59b6;
+            background-color: #f5eef8;
+        }
+
+        .answer-node {
+            background-color: #f5fff8;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            display: none;
+            margin-top: 5px;
+        }
+
+        .node-header {
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        .node-header:hover {
+            background-color: rgba(0, 0, 0, 0.03);
+        }
+
+        .node-title {
+            font-weight: 500;
+            flex-grow: 1;
+        }
+
+        .depth-indicator {
+            color: #666;
+            font-size: 0.8em;
+            margin-right: 10px;
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .question-node[data-depth="0"] .depth-indicator {
+            background-color: #2c3e50;
+            color: white;
+        }
+
+        .question-node[data-depth="1"] .depth-indicator {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .question-node[data-depth="2"] .depth-indicator {
+            background-color: #9b59b6;
+            color: white;
+        }
+
+        .toggle-icon {
+            font-size: 18px;
+            width: 24px;
+            height: 24px;
+            text-align: center;
+            line-height: 24px;
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 50%;
+            margin-left: 10px;
+        }
+
+        .children {
+            position: relative;
+            display: none;
+            padding-left: 30px;
+            border-left: 1px dashed rgba(0, 0, 0, 0.1);
+            margin-left: 10px;
+        }
+
+        .children::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            border-left: 1px dashed rgba(0, 0, 0, 0.1);
+        }
+
+        .expanded>.children,
+        .expanded>.answer-node {
+            display: block;
+        }
+
+        .metadata {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metadata-item {
+            display: inline-block;
+            margin-right: 20px;
+            font-size: 0.9em;
+        }
+
+        .metadata-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .metadata-value {
+            font-weight: 400;
+            color: #333;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-family: monospace;
+            margin-top: 10px;
+        }
+
+        .final-answer {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .final-answer h2 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #666;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+        }
+
+        .tab.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Client-Side Tree Visualization Demo</h1>
+        <p>This demo shows how to generate a tree visualization from a JSON response on the client side.</p>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="visualization">Visualization</div>
+            <div class="tab" data-tab="json-editor">JSON Editor</div>
+        </div>
+
+        <div id="visualization-tab" class="tab-content active">
+            <div id="metadata-container" class="metadata" style="display: none;">
+                <h2>Metadata</h2>
+                <div id="metadata-content"></div>
+            </div>
+
+            <div id="final-answer-container" class="final-answer" style="display: none;">
+                <h2>Final Answer</h2>
+                <div id="final-answer-content"></div>
+            </div>
+
+            <div id="tree-container" class="tree-container" style="display: none;">
+                <h2>Question Tree</h2>
+                <div id="tree-visualization"></div>
+            </div>
+
+            <div id="loading" class="loading">
+                Loading sample data...
+            </div>
+        </div>
+
+        <div id="json-editor-tab" class="tab-content">
+            <h2>Input JSON</h2>
+            <p>Edit the JSON response or paste a new one:</p>
+            <textarea id="json-input" placeholder="Paste JSON here..."></textarea>
+            <button id="visualize-button">Generate Visualization</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const jsonInput = document.getElementById('json-input');
+            const visualizeButton = document.getElementById('visualize-button');
+            const treeContainer = document.getElementById('tree-container');
+            const treeVisualization = document.getElementById('tree-visualization');
+            const metadataContainer = document.getElementById('metadata-container');
+            const metadataContent = document.getElementById('metadata-content');
+            const finalAnswerContainer = document.getElementById('final-answer-container');
+            const finalAnswerContent = document.getElementById('final-answer-content');
+            const loadingIndicator = document.getElementById('loading');
+
+            // Tab functionality
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function () {
+                    // Remove active class from all tabs and contents
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+
+                    // Show corresponding content
+                    const tabName = this.getAttribute('data-tab');
+                    document.getElementById(tabName + '-tab').classList.add('active');
+                });
+            });
+
+            // Load sample data automatically
+            fetch('sample_data.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Hide loading indicator
+                    loadingIndicator.style.display = 'none';
+
+                    // Store data in textarea for editing
+                    jsonInput.value = JSON.stringify(data, null, 2);
+
+                    // Generate visualization
+                    generateVisualization(data);
+                })
+                .catch(error => {
+                    console.error('Error loading sample data:', error);
+                    loadingIndicator.textContent = 'Error loading sample data. Please check the console for details or paste JSON manually in the JSON Editor tab.';
+                });
+
+            visualizeButton.addEventListener('click', function () {
+                try {
+                    const data = JSON.parse(jsonInput.value);
+                    generateVisualization(data);
+
+                    // Switch to visualization tab
+                    tabs[0].click();
+                } catch (error) {
+                    alert('Error parsing JSON: ' + error.message);
+                }
+            });
+
+            function generateVisualization(data) {
+                // Display metadata if available
+                if (data.metadata) {
+                    const metadata = data.metadata;
+                    metadataContent.innerHTML = `
+                        <div class="metadata-item">
+                            <span class="metadata-label">Total Nodes:</span>
+                            <span class="metadata-value">${metadata.total_nodes || 'N/A'}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Max Depth:</span>
+                            <span class="metadata-value">${metadata.max_depth || 'N/A'}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Processing Time:</span>
+                            <span class="metadata-value">${metadata.processing_time || 'N/A'}</span>
+                        </div>
+                    `;
+                    metadataContainer.style.display = 'block';
+                }
+
+                // Display final answer if available
+                if (data.explanation) {
+                    finalAnswerContent.innerHTML = data.explanation;
+                    finalAnswerContainer.style.display = 'block';
+                }
+
+                // Generate tree visualization if question_tree is available
+                if (data.question_tree) {
+                    treeVisualization.innerHTML = renderNodeHtml(data.question_tree);
+                    treeContainer.style.display = 'block';
+
+                    // Expand the root node by default
+                    const rootNode = treeVisualization.querySelector('.question-node');
+                    if (rootNode) {
+                        rootNode.classList.add('expanded');
+                        const icon = rootNode.querySelector('.toggle-icon');
+                        if (icon) icon.textContent = '−';
+
+                        // Also expand all level 1 nodes by default
+                        const level1Nodes = treeVisualization.querySelectorAll('.question-node[data-depth="1"]');
+                        level1Nodes.forEach(node => {
+                            node.classList.add('expanded');
+                            const nodeIcon = node.querySelector('.toggle-icon');
+                            if (nodeIcon) nodeIcon.textContent = '−';
+                        });
+                    }
+                } else {
+                    treeVisualization.innerHTML = '<p>No question tree found in the data.</p>';
+                    treeContainer.style.display = 'block';
+                }
+            }
+
+            // Global function to toggle node expansion
+            window.toggleNode = function (nodeId) {
+                const node = document.getElementById(nodeId);
+                if (!node) return;
+
+                node.classList.toggle('expanded');
+
+                // Update toggle icon
+                const icon = node.querySelector('.toggle-icon');
+                if (icon) {
+                    if (node.classList.contains('expanded')) {
+                        icon.textContent = '−';
+                    } else {
+                        icon.textContent = '+';
+                    }
+                }
+            };
+
+            // Function to render a node and its children
+            function renderNodeHtml(node) {
+                if (!node) return '';
+
+                const depth = node.depth || 0;
+                const nodeId = node.id || 'node-' + Math.random().toString(36).substr(2, 9);
+
+                let html = `
+                <div class="node question-node" id="${nodeId}" data-depth="${depth}">
+                    <div class="node-header" onclick="toggleNode('${nodeId}')">
+                        <span class="depth-indicator">Level ${depth}</span>
+                        <span class="node-title">${node.question}</span>
+                        <span class="toggle-icon">+</span>
+                    </div>
+                `;
+
+                if (node.needs_breakdown && node.children && node.children.length > 0) {
+                    html += '<div class="children">';
+                    for (const child of node.children) {
+                        html += renderNodeHtml(child);
+                    }
+                    html += '</div>';
+                } else if (node.answer) {
+                    html += `
+                    <div class="answer-node">
+                        <div>${node.answer}</div>
+                    </div>
+                    `;
+                }
+
+                html += '</div>';
+                return html;
+            }
+        });
+    </script>
+</body>
+
+</html>
