@@ -160,8 +160,8 @@ npm run destroy:all    # Remove all environments
 
 ```json
 {
-  "explanation": "HTML-formatted comprehensive answer",
-  "tree_visualization": "Interactive HTML visualization of the question tree",
+  "explanation": "HTML-formatted comprehensive answer with source citations",
+  "tree_visualization": "Interactive HTML visualization of the question tree with sources",
   "question_tree": {
     "id": "uuid",
     "question": "Original question",
@@ -172,6 +172,13 @@ npm run destroy:all    # Remove all environments
         "question": "Sub-question 1",
         "depth": 1,
         "answer": "Answer to sub-question 1",
+        "sources": [
+          {
+            "title": "Source document title",
+            "url": "Source URL",
+            "relevance_score": 0.95
+          }
+        ],
         "children": []
       }
     ]
@@ -179,7 +186,8 @@ npm run destroy:all    # Remove all environments
   "parameters_used": {
     "max_recursion_depth": 3,
     "max_sub_questions": 3,
-    "recursion_threshold": 1
+    "recursion_threshold": 1,
+    "token_reserve": 1000
   },
   "success": true,
   "formatted": true
@@ -195,4 +203,12 @@ npm run destroy:all    # Remove all environments
 
 ## License
 
-[MIT License](LICENSE) 
+[MIT License](LICENSE)
+
+### Key Features
+
+- **Question Breakdown**: Decomposes complex questions into manageable sub-questions
+- **Source Attribution**: Provides detailed source information for answers using RAG and BRAVE technologies
+- **Token Management**: Efficiently manages token usage to ensure comprehensive answers with proper source citations
+- **Interactive Visualization**: Shows the question breakdown tree with source information
+- **Recursive Processing**: Handles nested questions with configurable depth 
