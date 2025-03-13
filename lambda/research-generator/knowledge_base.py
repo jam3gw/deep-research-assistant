@@ -13,7 +13,17 @@ from datetime import datetime
 class KnowledgeBaseManager:
     def __init__(self, rag_engine):
         self.rag_engine = rag_engine
-        self.sources_file = os.path.join(os.path.dirname(__file__), 'data/sources.json')
+        
+        # Use /tmp directory for Lambda environments, which is writable
+        if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+            # We're running in Lambda, use /tmp directory
+            self.sources_file = os.path.join('/tmp', 'sources.json')
+        else:
+            # Local development environment
+            self.sources_file = os.path.join(os.path.dirname(__file__), 'data/sources.json')
+            os.makedirs(os.path.dirname(self.sources_file), exist_ok=True)
+        
+        # Ensure the parent directory exists
         os.makedirs(os.path.dirname(self.sources_file), exist_ok=True)
     
     def populate_from_brave_search(self, query: str, api_key: str, num_results: int = 3) -> List[Dict[str, Any]]:
