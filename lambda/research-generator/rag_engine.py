@@ -267,6 +267,8 @@ IMPORTANT: Return ONLY the sub-questions, one per line. Do not include any other
     
     def generate_answer_with_tree(self, question: str, client, brave_api_key: str, depth: int = 0) -> Dict[str, Any]:
         """Generate an answer with question tree structure using RAG with dynamic knowledge base."""
+        print(f"Generating tree node for question at depth {depth}: {question[:50]}...")
+        
         # Create node for current question
         node = {
             'id': str(uuid.uuid4()),
@@ -277,24 +279,40 @@ IMPORTANT: Return ONLY the sub-questions, one per line. Do not include any other
         
         # For deeper levels or if question is specific enough, don't generate sub-questions
         if depth >= 2:
+            print(f"  Reached max depth ({depth}). Generating answer without breakdown.")
             node['needs_breakdown'] = False
             node['answer'] = self.generate_answer(question, client, brave_api_key, depth)
             return node
         
         # Generate sub-questions using dynamic knowledge base
+        print(f"  Generating sub-questions for depth {depth}...")
         sub_questions = self.generate_sub_questions(question, client, brave_api_key)
+        print(f"  Generated {len(sub_questions)} sub-questions.")
         
         if len(sub_questions) <= 1:
             # If no meaningful breakdown, treat as leaf node
+            print(f"  Insufficient sub-questions ({len(sub_questions)}). Treating as leaf node.")
             node['needs_breakdown'] = False
             node['answer'] = self.generate_answer(question, client, brave_api_key, depth)
         else:
             # Process sub-questions recursively
+            print(f"  Processing {len(sub_questions)} sub-questions recursively.")
             node['needs_breakdown'] = True
-            for sub_q in sub_questions:
+            for i, sub_q in enumerate(sub_questions):
+                print(f"  Processing sub-question {i+1}/{len(sub_questions)} at depth {depth+1}")
+                # Ensure consistent depth by explicitly passing the expected depth
                 sub_node = self.generate_answer_with_tree(sub_q, client, brave_api_key, depth + 1)
+                
+                # Validate and fix sub-node structure if needed
+                if 'depth' not in sub_node or sub_node['depth'] != depth + 1:
+                    print(f"WARNING: Sub-node has incorrect depth. Expected {depth+1}, got {sub_node.get('depth')}. Fixing.")
+                    sub_node['depth'] = depth + 1
+                
                 sub_node['parent_question'] = question
                 node['children'].append(sub_node)
+        
+        # Final validation of node structure
+        print(f"Completed node at depth {depth} with {len(node.get('children', []))} children.")
         
         return node
     

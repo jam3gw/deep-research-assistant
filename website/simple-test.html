@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Tree Visualization Test</title>
+    <link rel="stylesheet" href="css/tree-visualizer.css">
+    <!-- D3.js for tree visualization -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        #tree-visualization {
+            min-height: 800px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .debug-info {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Simple Tree Visualization Test</h1>
+        <div class="debug-info" id="debug-info">
+            <p>D3.js loaded: <span id="d3-loaded">Checking...</span></p>
+            <p>Tree visualization function available: <span id="tree-viz-available">Checking...</span></p>
+        </div>
+        <button id="render-button">Render Tree Visualization</button>
+        <button id="render-long-answer-button">Test with Long Answers</button>
+        <div id="tree-visualization"></div>
+    </div>
+
+    <!-- Load tree visualization -->
+    <script src="js/tree-visualizer.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const renderButton = document.getElementById('render-button');
+            const renderLongAnswerButton = document.getElementById('render-long-answer-button');
+            const debugInfo = document.getElementById('debug-info');
+            const d3LoadedSpan = document.getElementById('d3-loaded');
+            const treeVizAvailableSpan = document.getElementById('tree-viz-available');
+
+            // Check if D3.js is loaded
+            if (typeof d3 !== 'undefined') {
+                d3LoadedSpan.textContent = 'Yes (version ' + d3.version + ')';
+                d3LoadedSpan.style.color = 'green';
+            } else {
+                d3LoadedSpan.textContent = 'No';
+                d3LoadedSpan.style.color = 'red';
+            }
+
+            // Check if tree visualization function is available
+            if (typeof window.renderTreeVisualization === 'function') {
+                treeVizAvailableSpan.textContent = 'Yes';
+                treeVizAvailableSpan.style.color = 'green';
+            } else {
+                treeVizAvailableSpan.textContent = 'No';
+                treeVizAvailableSpan.style.color = 'red';
+            }
+
+            renderButton.addEventListener('click', function () {
+                console.log('Render button clicked');
+
+                // Add log to debug info
+                const logEntry = document.createElement('p');
+                logEntry.textContent = 'Render button clicked at ' + new Date().toLocaleTimeString();
+                debugInfo.appendChild(logEntry);
+
+                // Sample data for testing
+                const sampleData = {
+                    question: "What are the key differences between supervised and unsupervised learning?",
+                    answer: "Supervised and unsupervised learning differ primarily in their use of labeled data, learning approach, applications, and evaluation methods.",
+                    depth: 0,
+                    id: "root",
+                    children: [
+                        {
+                            question: "How does supervised learning work?",
+                            answer: "Supervised learning uses labeled training data with input-output pairs.",
+                            depth: 1,
+                            id: "node-1",
+                            children: [
+                                {
+                                    question: "What are common supervised learning algorithms?",
+                                    answer: "Common supervised learning algorithms include Linear Regression, Logistic Regression, Support Vector Machines (SVM), Decision Trees, Random Forests, and Neural Networks.",
+                                    depth: 2,
+                                    id: "node-1-1",
+                                    children: []
+                                }
+                            ]
+                        },
+                        {
+                            question: "How does unsupervised learning work?",
+                            answer: "Unsupervised learning works with unlabeled data, identifying patterns and structures without predefined outputs.",
+                            depth: 1,
+                            id: "node-2",
+                            children: []
+                        }
+                    ]
+                };
+
+                const metadata = {
+                    total_nodes: 4,
+                    max_depth: 2,
+                    processing_time: "1.5 seconds"
+                };
+
+                // Try to render the tree
+                if (typeof window.renderTreeVisualization === 'function') {
+                    console.log('Calling renderTreeVisualization with sample data');
+
+                    // Add log to debug info
+                    const renderLogEntry = document.createElement('p');
+                    renderLogEntry.textContent = 'Calling renderTreeVisualization at ' + new Date().toLocaleTimeString();
+                    debugInfo.appendChild(renderLogEntry);
+
+                    try {
+                        window.renderTreeVisualization(sampleData, metadata);
+
+                        // Add success log to debug info
+                        const successLogEntry = document.createElement('p');
+                        successLogEntry.textContent = 'Visualization rendered successfully at ' + new Date().toLocaleTimeString();
+                        successLogEntry.style.color = 'green';
+                        debugInfo.appendChild(successLogEntry);
+                    } catch (error) {
+                        console.error('Error rendering tree:', error);
+
+                        // Add error log to debug info
+                        const errorLogEntry = document.createElement('p');
+                        errorLogEntry.textContent = 'Error rendering tree: ' + error.message;
+                        errorLogEntry.style.color = 'red';
+                        debugInfo.appendChild(errorLogEntry);
+                    }
+                } else {
+                    console.error('renderTreeVisualization function not available');
+                    document.getElementById('tree-visualization').innerHTML =
+                        '<div style="padding: 20px; background-color: #f8f9fa; border-radius: 8px;">' +
+                        '<h3>Error: renderTreeVisualization function not found</h3>' +
+                        '<p>The tree visualization function is not available. Please check the console for details.</p>' +
+                        '</div>';
+
+                    // Add error log to debug info
+                    const errorLogEntry = document.createElement('p');
+                    errorLogEntry.textContent = 'Error: renderTreeVisualization function not available';
+                    errorLogEntry.style.color = 'red';
+                    debugInfo.appendChild(errorLogEntry);
+                }
+            });
+
+            // Test with long answers
+            renderLongAnswerButton.addEventListener('click', function () {
+                console.log('Long answer test button clicked');
+
+                // Add log to debug info
+                const logEntry = document.createElement('p');
+                logEntry.textContent = 'Long answer test button clicked at ' + new Date().toLocaleTimeString();
+                debugInfo.appendChild(logEntry);
+
+                // Sample data with very long answers
+                const longAnswerData = {
+                    question: "What are the economic and environmental impacts of renewable energy adoption globally?",
+                    answer: "<h1>Economic and Environmental Impacts of Renewable Energy</h1><p>Renewable energy adoption has significant economic and environmental impacts globally. From an economic perspective, it creates jobs, reduces energy costs in the long term, and decreases dependence on imported fossil fuels. Environmentally, it reduces greenhouse gas emissions, improves air quality, and helps mitigate climate change.</p>",
+                    depth: 0,
+                    id: "root",
+                    children: [
+                        {
+                            question: "What are the economic impacts of renewable energy adoption?",
+                            answer: "<h2>Economic Impacts of Renewable Energy</h2><p>The economic impacts of renewable energy adoption include:</p><ul><li>Job creation in manufacturing, installation, and maintenance</li><li>Reduced energy costs over time as technology improves</li><li>Energy independence and reduced fossil fuel imports</li><li>New market opportunities and innovation</li><li>Increased energy access in remote areas</li><li>Stable energy prices less subject to global market fluctuations</li><li>Reduced healthcare costs due to decreased pollution</li></ul><p>According to the International Renewable Energy Agency (IRENA), the renewable energy sector employed over 11 million people globally in 2018, and this number continues to grow as more countries invest in clean energy infrastructure.</p>",
+                            depth: 1,
+                            id: "node-1",
+                            children: []
+                        },
+                        {
+                            question: "What are the environmental impacts of renewable energy adoption?",
+                            answer: "<h2>Environmental Impacts of Renewable Energy</h2><p>The environmental benefits of renewable energy adoption are substantial:</p><ul><li>Reduction in greenhouse gas emissions</li><li>Improved air quality and public health</li><li>Reduced water usage compared to conventional power generation</li><li>Conservation of natural resources</li><li>Decreased land degradation from fossil fuel extraction</li><li>Protection of ecosystems and biodiversity</li><li>Mitigation of climate change impacts</li></ul><p>Studies show that a transition to 100% renewable energy could reduce carbon dioxide emissions from the power sector by approximately 3 gigatons annually, which is essential for meeting global climate targets established in the Paris Agreement.</p><p>However, it's important to note that renewable energy technologies do have some environmental impacts, such as land use requirements for solar and wind farms, habitat disruption, and the environmental costs of manufacturing components. These impacts are generally considered significantly less harmful than those associated with fossil fuels.</p>",
+                            depth: 1,
+                            id: "node-2",
+                            children: []
+                        }
+                    ]
+                };
+
+                const metadata = {
+                    total_nodes: 3,
+                    max_depth: 1,
+                    processing_time: "2.3 seconds"
+                };
+
+                // Try to render the tree with long answers
+                if (typeof window.renderTreeVisualization === 'function') {
+                    try {
+                        window.renderTreeVisualization(longAnswerData, metadata);
+
+                        // Add success log to debug info
+                        const successLogEntry = document.createElement('p');
+                        successLogEntry.textContent = 'Long answer visualization rendered successfully at ' + new Date().toLocaleTimeString();
+                        successLogEntry.style.color = 'green';
+                        debugInfo.appendChild(successLogEntry);
+                    } catch (error) {
+                        console.error('Error rendering tree with long answers:', error);
+
+                        // Add error log to debug info
+                        const errorLogEntry = document.createElement('p');
+                        errorLogEntry.textContent = 'Error rendering tree with long answers: ' + error.message;
+                        errorLogEntry.style.color = 'red';
+                        debugInfo.appendChild(errorLogEntry);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -2,11 +2,59 @@
 Functions for visualizing the question tree.
 """
 
+def validate_tree_structure(node, parent_depth=None, path=""):
+    """
+    Validate the tree structure to ensure it's sound for visualization.
+    
+    Args:
+        node: The node to validate
+        parent_depth: The depth of the parent node
+        path: The path to this node (for error reporting)
+    
+    Returns:
+        tuple: (is_valid, issues)
+    """
+    issues = []
+    
+    # Check if node has required properties
+    if 'id' not in node:
+        issues.append(f"Node at {path} is missing 'id' property")
+    
+    if 'question' not in node:
+        issues.append(f"Node at {path} is missing 'question' property")
+    
+    if 'depth' not in node:
+        issues.append(f"Node at {path} is missing 'depth' property")
+        # We can't validate depth consistency without the depth property
+        return False, issues
+    
+    # Check depth consistency
+    depth = node['depth']
+    if parent_depth is not None and depth != parent_depth + 1:
+        issues.append(f"Node at {path} has inconsistent depth: {depth} (parent depth: {parent_depth})")
+    
+    # Check children
+    if node.get('needs_breakdown', False) and node.get('children'):
+        for i, child in enumerate(node['children']):
+            child_path = f"{path}/{i}"
+            child_valid, child_issues = validate_tree_structure(child, depth, child_path)
+            issues.extend(child_issues)
+    
+    return len(issues) == 0, issues
+
 def generate_tree_visualization(question_tree):
     """
     Generate an interactive HTML visualization of the question tree
     with collapsible nodes and detailed view on click
     """
+    # Validate tree structure
+    is_valid, issues = validate_tree_structure(question_tree)
+    if not is_valid:
+        print("WARNING: Tree structure validation failed with the following issues:")
+        for issue in issues:
+            print(f"  - {issue}")
+        print("Attempting to visualize anyway...")
+    
     html = """
     <!DOCTYPE html>
     <html>
@@ -24,17 +72,19 @@ def generate_tree_visualization(question_tree):
             .tree-container {
                 max-width: 1000px;
                 margin: 20px auto;
+                position: relative;
             }
             .node {
                 margin: 10px 0;
                 border-radius: 4px;
                 overflow: hidden;
+                position: relative;
             }
             .question-node {
                 background-color: #f5f8ff;
                 border-left: 3px solid #4a6fa5;
             }
-            /* Style nodes differently based on their depth */
+            /* Style nodes differently based on their logical depth */
             .question-node[data-depth="0"] {
                 border-left-color: #4a6fa5;
                 background-color: #f0f5ff;
@@ -72,7 +122,7 @@ def generate_tree_visualization(question_tree):
                 padding: 2px 6px;
                 border-radius: 10px;
             }
-            /* Style depth indicators based on level */
+            /* Style depth indicators based on logical depth */
             .question-node[data-depth="0"] .depth-indicator {
                 background-color: #e7f0ff;
                 color: #4a6fa5;
@@ -90,15 +140,16 @@ def generate_tree_visualization(question_tree):
                 width: 20px;
                 text-align: center;
             }
+            /* Base children container styling */
             .children {
-                margin-left: 25px;
-                border-left: 1px dashed #ccc;
-                padding-left: 15px;
+                position: relative;
                 display: none; /* Hidden by default */
+                border-left: 1px dashed #ccc;
             }
+            /* Show children when expanded */
             .expanded > .children, 
             .expanded > .answer-node {
-                display: block; /* Show when expanded */
+                display: block;
             }
             h1 {
                 color: #4a6fa5;
@@ -201,33 +252,32 @@ def render_interactive_node_html(node, path="", parent_depth=None):
         path: The path to this node (for breadcrumb display)
         parent_depth: The depth of the parent node (for consistent level numbering)
     """
-    # Get the original depth from the node
-    original_depth = node['depth']
-    
-    # Calculate the display depth (for consistent level numbering)
-    # If this is a root node (no parent_depth), use the original depth
-    # Otherwise, use parent_depth + 1 to ensure consistent hierarchy
-    display_depth = original_depth
-    
-    # Only use parent_depth for visual nesting, not for the actual level indicator
-    visual_depth = parent_depth + 1 if parent_depth is not None else 0
-    
+    # Get the depth from the node
+    depth = node['depth']
     node_id = node['id']
     
+    # Calculate indentation based on depth - simple and direct approach
+    indent_style = f"margin-left: {depth * 20}px;"
+    
+    # Create the node HTML with direct styling for indentation
     html = f"""
-    <div class="node question-node" id="{node_id}" data-depth="{display_depth}">
+    <div class="node question-node" id="{node_id}" data-depth="{depth}" style="{indent_style}">
         <div class="node-header" onclick="toggleNode('{node_id}')">
-            <span class="depth-indicator">Level {display_depth}</span>
+            <span class="depth-indicator">Level {depth}</span>
             <span class="node-title">{node['question']}</span>
             <span class="toggle-icon">+</span>
         </div>
     """
     
     if node.get('needs_breakdown', False) and node.get('children'):
-        html += '<div class="children">'
+        # Add a small left margin to the children container for the connecting line
+        html += '<div class="children" style="margin-left: 10px;">'
+        
+        # Process each child node
         for child in node['children']:
-            # Pass the current visual_depth as the parent_depth for the child
-            html += render_interactive_node_html(child, path, visual_depth)
+            child_html = render_interactive_node_html(child, path)
+            html += child_html
+            
         html += '</div>'
     else:
         html += f"""

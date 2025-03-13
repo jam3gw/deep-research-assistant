@@ -14,7 +14,7 @@ import time
 from anthropic import Anthropic
 import openai
 from rag_engine import RAGEngine
-from tree_visualizer import generate_tree_visualization
+from tree_visualizer import generate_tree_visualization, validate_tree_structure
 import logging
 
 # Set up logging
@@ -81,6 +81,15 @@ def main():
         print("\nGenerating question tree and answers...")
         try:
             question_tree = rag.generate_answer_with_tree(args.question, client, brave_key)
+            
+            # Validate the tree structure
+            is_valid, issues = validate_tree_structure(question_tree)
+            if not is_valid:
+                print("\nWARNING: Tree structure validation failed with the following issues:")
+                for issue in issues:
+                    print(f"  - {issue}")
+                print("Attempting to continue anyway...")
+                
         except Exception as e:
             logger.error(f"Error generating question tree: {str(e)}")
             raise
@@ -98,9 +107,8 @@ def main():
         try:
             if question_tree.get('needs_breakdown', False):
                 # If tree was broken down, use the last answer as final
-                answer_data = rag.generate_answer(args.question, client, brave_key)
-                final_answer = answer_data['content']
-                sources = answer_data['sources']
+                final_answer = rag.generate_answer(args.question, client, brave_key)
+                sources = []  # Since generate_answer doesn't return sources, initialize as empty
             else:
                 # If no breakdown, use the direct answer
                 final_answer = question_tree['answer']

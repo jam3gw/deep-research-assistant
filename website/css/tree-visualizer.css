@@ -1,0 +1,598 @@
+/**
+ * Styles for the simple tree visualization
+ */
+
+/* Tree container */
+.simple-tree-container {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin-top: 20px;
+    padding: 20px;
+    overflow-x: auto;
+    position: relative;
+}
+
+/* Metadata section */
+.tree-metadata {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.metadata-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.metadata-label {
+    font-weight: 600;
+    color: #666;
+}
+
+.metadata-value {
+    font-weight: 400;
+    color: #333;
+}
+
+/* Tree nodes */
+.tree-node {
+    margin-bottom: 15px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+/* Visual connectors for the tree */
+.depth-1::before {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: 20px;
+    height: 15px;
+    width: 2px;
+    background-color: #ddd;
+}
+
+.depth-1:first-of-type::before {
+    display: none;
+}
+
+/* Vertical line for Level 1 nodes */
+.depth-1 {
+    position: relative;
+    margin-left: 40px;
+    border-left: 2px solid #ddd;
+    padding-left: 20px;
+}
+
+/* Vertical line for Level 2 nodes */
+.depth-2 {
+    position: relative;
+    margin-left: 20px;
+    border-left: 2px solid #ddd;
+    padding-left: 20px;
+}
+
+/* Horizontal connector line for all nodes */
+.tree-node::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: -20px;
+    width: 20px;
+    height: 2px;
+    background-color: #ddd;
+}
+
+/* Hide connector for root node */
+.depth-0::before {
+    display: none;
+}
+
+.node-content {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    border-left: 4px solid #ccc;
+    margin-bottom: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.depth-0>.node-content {
+    border-left-color: #2c3e50;
+    background-color: #ecf0f1;
+    margin-left: 0;
+}
+
+.depth-1>.node-content {
+    border-left-color: #3498db;
+    background-color: #e8f4fc;
+    margin-left: 0;
+}
+
+.depth-2>.node-content {
+    border-left-color: #9b59b6;
+    background-color: #f5eef8;
+    margin-left: 0;
+}
+
+.depth-3>.node-content {
+    border-left-color: #e74c3c;
+    background-color: #fdf1f0;
+    margin-left: 0;
+}
+
+.node-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.depth-indicator {
+    font-size: 12px;
+    color: #666;
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.expand-btn {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.expand-btn:hover {
+    background-color: #2980b9;
+}
+
+.node-question {
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #333;
+    line-height: 1.5;
+    font-size: 16px;
+}
+
+.answer-btn {
+    background-color: #4a6fa5;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.answer-btn:hover {
+    background-color: #3a5a80;
+}
+
+.node-children {
+    padding-left: 20px;
+    margin-left: 10px;
+}
+
+/* Modal styling */
+.answer-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+    animation: fadeIn 0.3s;
+}
+
+.modal-content {
+    position: relative;
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 800px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideIn 0.3s;
+}
+
+.close-modal {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-modal:hover,
+.close-modal:focus {
+    color: #333;
+    text-decoration: none;
+}
+
+.modal-title {
+    margin-top: 0;
+    color: #2c3e50;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    font-size: 20px;
+}
+
+.modal-body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+
+.modal-body h1 {
+    font-size: 24px;
+    margin-top: 0;
+}
+
+.modal-body h2 {
+    font-size: 20px;
+}
+
+.modal-body p {
+    margin-bottom: 15px;
+}
+
+.modal-body ul,
+.modal-body ol {
+    margin-bottom: 15px;
+    padding-left: 20px;
+}
+
+.modal-body li {
+    margin-bottom: 5px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0
+    }
+
+    to {
+        opacity: 1
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .tree-metadata {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+    }
+
+    .depth-1 {
+        margin-left: 20px;
+        padding-left: 10px;
+    }
+
+    .depth-2 {
+        margin-left: 10px;
+        padding-left: 10px;
+    }
+}
+
+/* Tree Visualization Styles */
+.tree-container {
+    font-family: 'Arial', sans-serif;
+    margin: 20px;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.tree-node {
+    position: relative;
+    margin-bottom: 10px;
+    padding-left: 20px;
+}
+
+/* Depth-specific styles */
+.depth-0 {
+    padding-left: 0;
+    margin-left: 0;
+}
+
+.depth-1 {
+    position: relative;
+    margin-left: 20px;
+    border-left: 2px solid #ddd;
+    padding-left: 20px;
+}
+
+.depth-1::before {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 0;
+    width: 20px;
+    height: 2px;
+    background-color: #ddd;
+}
+
+.depth-2 {
+    position: relative;
+    margin-left: 20px;
+    border-left: 2px solid #ddd;
+    padding-left: 20px;
+}
+
+.depth-2::before {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 0;
+    width: 20px;
+    height: 2px;
+    background-color: #ddd;
+}
+
+.depth-3, .depth-4, .depth-5 {
+    position: relative;
+    margin-left: 20px;
+    border-left: 2px solid #ddd;
+    padding-left: 20px;
+}
+
+.depth-3::before, .depth-4::before, .depth-5::before {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 0;
+    width: 20px;
+    height: 2px;
+    background-color: #ddd;
+}
+
+.node-content {
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 12px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.node-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.depth-indicator {
+    font-size: 12px;
+    color: #888;
+    font-weight: bold;
+}
+
+.expand-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+    color: #555;
+}
+
+.expand-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.node-question {
+    font-weight: 500;
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+.node-children {
+    margin-top: 10px;
+}
+
+.answer-btn {
+    background-color: #4a90e2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.answer-btn:hover {
+    background-color: #3a7bc8;
+}
+
+/* Modal styles */
+.answer-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: white;
+    width: 80%;
+    max-width: 800px;
+    max-height: 80vh;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    overflow-y: auto;
+    position: relative;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-right: 20px;
+    color: #333;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+    transition: color 0.2s;
+}
+
+.close-modal:hover {
+    color: #333;
+}
+
+.modal-body {
+    line-height: 1.6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+    
+    .tree-container {
+        padding: 10px;
+    }
+}
+
+/* Zoom controls */
+.zoom-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 5px;
+}
+
+.zoom-btn {
+    width: 30px;
+    height: 30px;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.zoom-btn:hover {
+    background-color: #f5f5f5;
+}
+
+/* Tree node expanded state */
+.tree-node.expanded > .node-content {
+    border-left: 3px solid #4a90e2;
+}
+
+/* Tooltip for question text */
+.node-question {
+    position: relative;
+    cursor: pointer;
+}
+
+.node-question:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    white-space: normal;
+    max-width: 300px;
+    z-index: 100;
+    pointer-events: none;
+}
