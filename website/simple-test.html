@@ -6,8 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Tree Visualization Test</title>
     <link rel="stylesheet" href="css/tree-visualizer.css">
-    <!-- D3.js for tree visualization -->
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Custom tree visualization implementation -->
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -70,7 +69,6 @@
     <div class="container">
         <h1>Simple Tree Visualization Test</h1>
         <div class="debug-info" id="debug-info">
-            <p>D3.js loaded: <span id="d3-loaded">Checking...</span></p>
             <p>Tree visualization function available: <span id="tree-viz-available">Checking...</span></p>
         </div>
         <button id="render-button">Render Tree Visualization</button>
@@ -86,20 +84,10 @@
             const renderButton = document.getElementById('render-button');
             const renderLongAnswerButton = document.getElementById('render-long-answer-button');
             const debugInfo = document.getElementById('debug-info');
-            const d3LoadedSpan = document.getElementById('d3-loaded');
             const treeVizAvailableSpan = document.getElementById('tree-viz-available');
 
-            // Check if D3.js is loaded
-            if (typeof d3 !== 'undefined') {
-                d3LoadedSpan.textContent = 'Yes (version ' + d3.version + ')';
-                d3LoadedSpan.style.color = 'green';
-            } else {
-                d3LoadedSpan.textContent = 'No';
-                d3LoadedSpan.style.color = 'red';
-            }
-
             // Check if tree visualization function is available
-            if (typeof window.renderTreeVisualization === 'function') {
+            if (typeof renderTreeVisualization === 'function') {
                 treeVizAvailableSpan.textContent = 'Yes';
                 treeVizAvailableSpan.style.color = 'green';
             } else {
@@ -154,7 +142,7 @@
                 };
 
                 // Try to render the tree
-                if (typeof window.renderTreeVisualization === 'function') {
+                if (typeof renderTreeVisualization === 'function') {
                     console.log('Calling renderTreeVisualization with sample data');
 
                     // Add log to debug info
@@ -163,7 +151,7 @@
                     debugInfo.appendChild(renderLogEntry);
 
                     try {
-                        window.renderTreeVisualization(sampleData, metadata);
+                        renderTreeVisualization(sampleData, metadata);
 
                         // Add success log to debug info
                         const successLogEntry = document.createElement('p');
@@ -235,9 +223,9 @@
                 };
 
                 // Try to render the tree with long answers
-                if (typeof window.renderTreeVisualization === 'function') {
+                if (typeof renderTreeVisualization === 'function') {
                     try {
-                        window.renderTreeVisualization(longAnswerData, metadata);
+                        renderTreeVisualization(longAnswerData, metadata);
 
                         // Add success log to debug info
                         const successLogEntry = document.createElement('p');

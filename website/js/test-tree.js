@@ -2,9 +2,6 @@
 document.addEventListener('DOMContentLoaded', function () {
     console.log('Test script loaded');
 
-    // Check if D3.js is available
-    console.log('D3.js available:', typeof d3 !== 'undefined');
-
     // Check if our tree visualization function is available
     console.log('renderTreeVisualization available:', typeof window.renderTreeVisualization !== 'undefined');
 

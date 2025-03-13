@@ -342,15 +342,15 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderClientSideTree(questionTree, metadata) {
         console.log('renderClientSideTree called with:', { questionTree, metadata });
 
-        // Use the D3.js tree visualization
+        // Use our custom tree visualization
         if (typeof window.renderTreeVisualization === 'function') {
-            console.log('Using D3.js tree visualization');
+            console.log('Using custom tree visualization');
             window.renderTreeVisualization(questionTree, metadata, 'tree-visualization');
             return;
         }
 
-        // Fallback to a simple visualization if D3.js visualization is not available
-        console.warn('D3.js tree visualization not available, falling back to simple implementation');
+        // Fallback to a simple visualization if custom visualization is not available
+        console.warn('Custom tree visualization not available, falling back to simple implementation');
 
         // Clear previous content
         treeVisualization.innerHTML = '';
