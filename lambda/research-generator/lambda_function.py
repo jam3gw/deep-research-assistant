@@ -6,8 +6,10 @@ import boto3
 import os
 from anthropic import Anthropic
 import openai
-from rag_engine import RAGEngine
+from rag_engine import RAGEngine, deduplicate_sources
 from utils import build_response
+import time
+import traceback
 
 def lambda_handler(event, context):
     # Check if this is a Lambda Function URL invocation
@@ -61,35 +63,81 @@ def lambda_handler(event, context):
             rag.set_openai_key(openai_key)
             
             # Generate answer with question tree using dynamic knowledge base
-            question_tree = rag.generate_answer_with_tree(query, client, brave_key)
-
+            start_time = time.time()
+            try:
+                print(f"Starting answer generation for query: '{query}'")
+                question_tree = rag.generate_answer_with_tree(query, client, brave_key)
+                print("Answer generation completed successfully")
+            except Exception as e:
+                print(f"ERROR during answer generation: {str(e)}")
+                print(f"Exception type: {type(e).__name__}")
+                print(f"Exception traceback: {traceback.format_exc()}")
+                raise ValueError(f"Failed to generate answer: {str(e)}")
+                
+            processing_time = time.time() - start_time
+            print(f"Total processing time: {processing_time:.2f} seconds")
+            
             # Log the question tree structure for debugging
             print("Generated question tree structure:")
-            print(json.dumps(question_tree, indent=2, default=str))
+            try:
+                print(json.dumps(question_tree, indent=2, default=str))
+            except Exception as e:
+                print(f"ERROR serializing question tree: {str(e)}")
+                print(f"Question tree type: {type(question_tree)}")
+                print(f"Question tree keys: {question_tree.keys() if isinstance(question_tree, dict) else 'Not a dict'}")
             
-            # Get the final answer from the tree structure
-            if question_tree['needs_breakdown']:
-                # If tree was broken down, use the last answer as final
-                final_answer = rag.generate_answer(query, client, brave_key, depth=0)
+            # Verify if answer exists in the question tree
+            if isinstance(question_tree, dict) and 'answer' not in question_tree:
+                print("WARNING: Root node is missing 'answer' field")
+                print(f"Available fields in root node: {list(question_tree.keys())}")
+                
+                # Check if there was an error message in the question tree
+                if 'error' in question_tree:
+                    print(f"Error found in question tree: {question_tree['error']}")
+                    raise ValueError(f"Error in answer generation: {question_tree['error']}")
+            elif not isinstance(question_tree, dict):
+                print(f"WARNING: Question tree is not a dictionary. Type: {type(question_tree)}")
+                raise ValueError("Invalid question tree structure returned")
+            else:
+                print(f"Answer field exists in root node, length: {len(question_tree.get('answer', ''))}")
+            
+            # Collect all sources from the tree
+            all_sources = collect_all_sources(question_tree)
+            
+            # If there's a breakdown, use the final answer from the root node
+            if question_tree.get('needs_breakdown', False) and question_tree.get('children'):
+                final_answer = question_tree.get('answer', "No answer was generated. Please try again with a more specific question.")
+                
+                # Check if sources section is missing and add it if necessary
+                if all_sources:
+                    # Instead of adding sources to the HTML, we'll include them in the response JSON
+                    # The frontend will handle displaying the sources
+                    pass
             else:
                 # If no breakdown, use the direct answer
-                final_answer = question_tree['answer']
+                final_answer = question_tree.get('answer', "No answer was generated. Please try again with a more specific question.")
             
             # Calculate metadata for the frontend
             metadata = {
                 'total_nodes': count_nodes(question_tree),
                 'max_depth': get_max_depth(question_tree),
-                'processing_time': 'N/A'  # Could add actual processing time if needed
+                'processing_time': f"{processing_time:.2f} seconds"
             }
             
-            # Return the response with tree structure but without HTML visualization
-            return build_response(200, {
+            # Include all sources in the response for the frontend to handle
+            response = {
                 'explanation': final_answer,
                 'question_tree': question_tree,
                 'metadata': metadata,
-                'success': True,
-                'formatted': True
-            }, not is_function_url)
+                'all_sources': all_sources,
+                'sources_metadata': {
+                    'total_sources': len(all_sources),
+                    'sources_by_relevance': sorted(all_sources, key=lambda s: -s.get('relevance', 0)),
+                    'most_frequent_sources': sorted(all_sources, key=lambda s: -s.get('frequency', 0))[:5]
+                }
+            }
+            
+            return build_response(200, response, not is_function_url)
             
         except json.JSONDecodeError:
             return build_response(400, {'error': 'Invalid JSON in request body'}, not is_function_url)
@@ -129,3 +177,76 @@ def get_max_depth(tree, current_depth=0):
             max_depth = max(max_depth, child_depth)
     
     return max_depth
+
+def collect_all_sources(tree):
+    """Collect all sources from the tree with frequency and relevance information."""
+    sources = []
+    source_frequency = {}  # Track how many times each source appears
+    
+    # Helper function to recursively collect sources with depth information
+    def _collect_sources_with_depth(node, depth=0):
+        if not node or not isinstance(node, dict):
+            print(f"WARNING: Invalid node at depth {depth}: {type(node)}")
+            return []
+            
+        node_sources = []
+        
+        # Collect sources from the current node if available
+        if 'sources' in node and node['sources']:
+            try:
+                for source in node['sources']:
+                    if not isinstance(source, dict):
+                        print(f"WARNING: Invalid source type: {type(source)}")
+                        continue
+                        
+                    # Create a copy of the source with depth information
+                    source_with_depth = source.copy()
+                    source_with_depth['depth'] = depth
+                    source_with_depth['node_question'] = node.get('question', '')
+                    node_sources.append(source_with_depth)
+                    
+                    # Track frequency
+                    url = source.get('url', '')
+                    if url:
+                        source_frequency[url] = source_frequency.get(url, 0) + 1
+            except Exception as e:
+                print(f"ERROR processing sources at depth {depth}: {str(e)}")
+        
+        # Recursively collect sources from children
+        if 'children' in node and node['children']:
+            try:
+                for child in node['children']:
+                    child_sources = _collect_sources_with_depth(child, depth + 1)
+                    if child_sources:
+                        node_sources.extend(child_sources)
+            except Exception as e:
+                print(f"ERROR processing children at depth {depth}: {str(e)}")
+        
+        return node_sources
+    
+    try:
+        # Collect all sources with depth information
+        sources = _collect_sources_with_depth(tree)
+        
+        # Deduplicate sources while preserving the most relevant information
+        deduplicated_sources = []
+        seen_urls = set()
+        
+        # Sort sources by frequency (most frequent first) and then by depth (lower depth first)
+        sources.sort(key=lambda s: (-source_frequency.get(s.get('url', ''), 0), s.get('depth', 0)))
+        
+        for source in sources:
+            url = source.get('url', '')
+            if url and url not in seen_urls:
+                # Add frequency information
+                source['frequency'] = source_frequency.get(url, 1)
+                # Calculate relevance score (higher is more relevant)
+                source['relevance'] = (source['frequency'] * 10) / (source.get('depth', 0) + 1)
+                deduplicated_sources.append(source)
+                seen_urls.add(url)
+        
+        return deduplicated_sources
+    except Exception as e:
+        print(f"ERROR in collect_all_sources: {str(e)}")
+        # Return an empty list in case of error
+        return []
