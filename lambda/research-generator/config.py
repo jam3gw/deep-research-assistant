@@ -27,7 +27,7 @@ DEFAULT_EVALUATION_MAX_TOKENS = 400  # Keep unchanged
 # RAG configuration
 CHUNK_SIZE = 150  # Reduced from 250 to prevent potential memory issues
 CHUNK_OVERLAP = 15  # Reduced from 25 to maintain proportion
-SIMILARITY_THRESHOLD = 0.7  # Minimum similarity score for retrieved documents
+SIMILARITY_THRESHOLD = 0.45  # Reduced from 0.55 to ensure more sources are included
 
 # Validation
 if CHUNK_SIZE <= CHUNK_OVERLAP:
