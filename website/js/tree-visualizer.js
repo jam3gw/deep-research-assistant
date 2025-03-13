@@ -123,7 +123,7 @@ function renderTreeStructure(rootNode, container) {
             <div class="node-answer" style="display: none;">${rootNode.answer || ''}</div>
     `;
 
-    // Always add sources section, even if empty
+    // Always add sources section for the root node
     rootNodeContent += `
         <div class="node-sources">
             <button class="sources-btn" data-node-id="${rootNode.id || 'root'}">Sources ${rootNode.sources && rootNode.sources.length > 0 ? `(${rootNode.sources.length})` : '(0)'}</button>
@@ -192,30 +192,32 @@ function renderLevel2Node(node, container) {
             <div class="node-answer" style="display: none;">${node.answer || ''}</div>
     `;
 
-    // Always add sources section, even if empty
-    nodeContent += `
-        <div class="node-sources">
-            <button class="sources-btn" data-node-id="${node.id}">Sources ${node.sources && node.sources.length > 0 ? `(${node.sources.length})` : '(0)'}</button>
-            <div class="sources-list" style="display: none;">
-                <h4>Sources:</h4>
-    `;
-
-    if (node.sources && node.sources.length > 0) {
+    // Only add sources section for leaf nodes (nodes without children)
+    if (!node.children || node.children.length === 0) {
         nodeContent += `
-                <ul>
-                    ${node.sources.map((source, index) =>
-            `<li><a href="${source.url}" target="_blank" rel="noopener noreferrer">${source.title}</a></li>`
-        ).join('')}
-                </ul>
+            <div class="node-sources">
+                <button class="sources-btn" data-node-id="${node.id}">Sources ${node.sources && node.sources.length > 0 ? `(${node.sources.length})` : '(0)'}</button>
+                <div class="sources-list" style="display: none;">
+                    <h4>Sources:</h4>
         `;
-    } else {
-        nodeContent += `<p>No sources available for this node.</p>`;
-    }
 
-    nodeContent += `
+        if (node.sources && node.sources.length > 0) {
+            nodeContent += `
+                    <ul>
+                        ${node.sources.map((source, index) =>
+                `<li><a href="${source.url}" target="_blank" rel="noopener noreferrer">${source.title}</a></li>`
+            ).join('')}
+                    </ul>
+            `;
+        } else {
+            nodeContent += `<p>No sources available for this node.</p>`;
+        }
+
+        nodeContent += `
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    }
 
     nodeContent += `</div>`;
     nodeElement.innerHTML = nodeContent;
@@ -260,48 +262,50 @@ function renderChildNode(node, container, depth) {
             <div class="node-answer" style="display: none;">${node.answer || ''}</div>
     `;
 
-    // Always add sources section, even if empty
-    nodeContent += `
-        <div class="node-sources">
-            <button class="sources-btn" data-node-id="${node.id}">Sources ${node.sources && node.sources.length > 0 ? `(${node.sources.length})` : '(0)'}</button>
-            <div class="sources-list" style="display: none;">
-                <h4>Sources:</h4>
-    `;
-
-    if (node.sources && node.sources.length > 0) {
+    // Only add sources section for leaf nodes (nodes without children)
+    if (!node.children || node.children.length === 0) {
         nodeContent += `
-                <ul>
-                    ${node.sources.map((source, index) =>
-            `<li>
-                <a href="${source.url}" target="_blank" rel="noopener noreferrer">${source.title}</a>
-                ${source.frequency > 1 ? `<span class="source-frequency">(Referenced ${source.frequency} times)</span>` : ''}
-            </li>`
-        ).join('')}
-                </ul>
+            <div class="node-sources">
+                <button class="sources-btn" data-node-id="${node.id}">Sources ${node.sources && node.sources.length > 0 ? `(${node.sources.length})` : '(0)'}</button>
+                <div class="sources-list" style="display: none;">
+                    <h4>Sources:</h4>
         `;
-    } else {
-        nodeContent += `<p>No sources available for this node.</p>`;
-    }
 
-    nodeContent += `
+        if (node.sources && node.sources.length > 0) {
+            nodeContent += `
+                    <ul>
+                        ${node.sources.map((source, index) =>
+                `<li>
+                    <a href="${source.url}" target="_blank" rel="noopener noreferrer">${source.title}</a>
+                    ${source.frequency > 1 ? `<span class="source-frequency">(Referenced ${source.frequency} times)</span>` : ''}
+                </li>`
+            ).join('')}
+                    </ul>
+            `;
+        } else {
+            nodeContent += `<p>No sources available for this node.</p>`;
+        }
+
+        nodeContent += `
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    }
 
     nodeContent += `</div>`;
     nodeElement.innerHTML = nodeContent;
-
     container.appendChild(nodeElement);
 
-    // Render children if any
+    // Create container for children if needed
     if (node.children && node.children.length > 0) {
         const childrenContainer = document.createElement('div');
         childrenContainer.className = 'node-children';
         childrenContainer.style.display = 'none'; // Initially hidden
         nodeElement.appendChild(childrenContainer);
 
-        node.children.forEach(child => {
-            renderChildNode(child, childrenContainer, depth + 1);
+        // Render children
+        node.children.forEach(childNode => {
+            renderChildNode(childNode, childrenContainer, depth + 1);
         });
     }
 }
