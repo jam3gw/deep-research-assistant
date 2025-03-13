@@ -386,6 +386,70 @@ class RAGEngine:
         relevant_docs = self.retrieve(question)
         context = "\n\n".join([doc['content'] for doc in relevant_docs])
         
+        # First, assess the complexity of the question
+        system_message_complexity = """You are an AI assistant that analyzes questions to determine their complexity.
+Your task is to categorize questions as 'simple', 'medium', or 'complex' based on:
+1. The number of distinct concepts or topics involved
+2. The depth of knowledge required to answer comprehensively
+3. Whether the question has multiple facets or dimensions
+4. The scope of the question (narrow vs. broad)
+5. The level of specificity vs. generality
+
+Respond with ONLY ONE of these three words: 'simple', 'medium', or 'complex'."""
+        
+        complexity_prompt = f"""Question: {question}
+
+Analyze this question and determine if it is 'simple', 'medium', or 'complex'.
+
+A 'simple' question:
+- Focuses on a single, well-defined concept
+- Can be answered directly and concisely
+- Doesn't require breaking down into sub-questions
+- Example: "What is the capital of France?"
+
+A 'medium' question:
+- Involves 2-3 related concepts
+- Benefits from some structured breakdown
+- Requires moderate explanation
+- Example: "How does climate change affect agriculture?"
+
+A 'complex' question:
+- Involves multiple interconnected concepts
+- Has several distinct facets or dimensions
+- Requires comprehensive explanation
+- Benefits from being broken into 3-5 sub-questions
+- Example: "What are the economic, social, and environmental impacts of artificial intelligence on global development, and how might these change over the next decade?"
+
+Respond with ONLY ONE of these three words: 'simple', 'medium', or 'complex'."""
+
+        # Get complexity assessment
+        complexity_message = client.messages.create(
+            model=DEFAULT_MODEL,
+            max_tokens=10,  # Very short response needed
+            temperature=0,
+            system=system_message_complexity,
+            messages=[
+                {"role": "user", "content": complexity_prompt}
+            ]
+        )
+        
+        complexity = extract_content(complexity_message).strip().lower()
+        print(f"  Question complexity assessed as: {complexity}")
+        
+        # Determine number of sub-questions based on complexity
+        if complexity == "simple":
+            # For simple questions, we might not need sub-questions at all
+            # Return an empty list to indicate no breakdown needed
+            print("  Simple question detected. No sub-questions needed.")
+            return []
+        elif complexity == "medium":
+            num_sub_questions = "2-3"
+            print("  Medium complexity question. Generating 2-3 sub-questions.")
+        else:  # complex or any other response
+            num_sub_questions = "3-5"
+            print("  Complex question detected. Generating 3-5 sub-questions.")
+        
+        # Now generate the appropriate number of sub-questions
         system_message = """You are a research assistant tasked with breaking down complex questions into focused, concise sub-questions.
 Your responses should contain ONLY the sub-questions, one per line, with no additional text, prefixes, or explanations.
 Each sub-question should be specific, focused, and directly answerable."""
@@ -395,7 +459,7 @@ Each sub-question should be specific, focused, and directly answerable."""
 
 Main question: {question}
 
-Break this question down into 2-3 highly focused, concise sub-questions that will help provide a comprehensive answer.
+Break this question down into {num_sub_questions} highly focused, concise sub-questions that will help provide a comprehensive answer.
 Each sub-question should:
 1. Address a specific aspect of the main question
 2. Be more specific and narrower in scope than the main question
@@ -422,7 +486,11 @@ IMPORTANT:
         # Extract sub-questions from response and clean up
         response = extract_content(message)
         sub_questions = [q.strip() for q in response.split('\n') if q.strip() and not q.lower().startswith(("here are", "question", "-", "•", "*", "1.", "2.", "3."))]
-        return sub_questions[:3]  # Limit to 3 sub-questions
+        
+        # For complex questions, return up to 5 sub-questions
+        # For medium questions, return up to 3 sub-questions
+        max_questions = 5 if complexity == "complex" else 3
+        return sub_questions[:max_questions]
     
     def generate_answer_with_tree(self, question: str, client, brave_api_key: str, depth: int = 0) -> Dict[str, Any]:
         """Generate an answer with question tree structure using RAG with dynamic knowledge base."""
@@ -546,7 +614,56 @@ IMPORTANT:
                 
                 return node
             
-            if len(sub_questions) <= 1:
+            if len(sub_questions) <= 0:
+                # For simple questions that don't need breakdown
+                print(f"  Simple question detected. No breakdown needed.")
+                node['needs_breakdown'] = False
+                
+                try:
+                    # First retrieve relevant documents to get sources
+                    relevant_docs = self.retrieve_with_fallback(question, depth)
+                    
+                    sources = []
+                    for doc in relevant_docs:
+                        if 'metadata' in doc and 'source' in doc['metadata']:
+                            source_url = doc['metadata']['source']
+                            source_title = doc['metadata'].get('title', 'Untitled Source')
+                            sources.append({
+                                'url': source_url,
+                                'title': source_title
+                            })
+                    
+                    # If no sources found, add a placeholder source
+                    if not sources:
+                        print(f"  WARNING: No sources found for node at depth {depth}. Adding a placeholder source.")
+                        sources.append({
+                            'url': "https://example.com/no-sources-found",
+                            'title': "No specific sources found for this question"
+                        })
+                    
+                    # Deduplicate sources
+                    sources = deduplicate_sources(sources)
+                    print(f"  Found {len(sources)} unique sources for node at depth {depth}")
+                    
+                    # Add sources to the node
+                    node['sources'] = sources
+                except Exception as e:
+                    print(f"ERROR retrieving sources at depth {depth}: {str(e)}")
+                    node['sources_error'] = str(e)
+                
+                try:
+                    # Generate answer with sources - use concise mode for leaf nodes
+                    print(f"  Generating direct answer for simple question at depth {depth}...")
+                    answer = self.generate_answer(question, client, brave_api_key, depth, concise=False)
+                    print(f"  Generated answer of length {len(answer)} characters.")
+                    node['answer'] = answer
+                except Exception as e:
+                    print(f"ERROR generating answer at depth {depth}: {str(e)}")
+                    node['answer_error'] = str(e)
+                    node['answer'] = f"Error generating answer: {str(e)}"
+                
+                return node
+            elif len(sub_questions) <= 1:
                 # If no meaningful breakdown, treat as leaf node
                 print(f"  Insufficient sub-questions ({len(sub_questions)}). Treating as leaf node.")
                 node['needs_breakdown'] = False
@@ -757,8 +874,211 @@ IMPORTANT:
             
             print(f"  Token allocation: {answer_tokens} for answer, {sources_tokens} reserved for sources.")
             
-            # Determine which prompt to use based on depth and conciseness
-            if concise or depth >= 1:
+            # First, check if this is a simple question at depth 0 (root level)
+            # For simple questions at root level, we want a direct but comprehensive answer
+            if depth == 0 and not concise:
+                # Assess if this is a simple question
+                system_message_complexity = """You are an AI assistant that analyzes questions to determine their complexity.
+Your task is to categorize questions as 'simple', 'medium', or 'complex' based on:
+1. The number of distinct concepts or topics involved
+2. The depth of knowledge required to answer comprehensively
+3. Whether the question has multiple facets or dimensions
+4. The scope of the question (narrow vs. broad)
+5. The level of specificity vs. generality
+
+Respond with ONLY ONE of these three words: 'simple', 'medium', or 'complex'."""
+                
+                complexity_prompt = f"""Question: {query}
+
+Analyze this question and determine if it is 'simple', 'medium', or 'complex'.
+
+A 'simple' question:
+- Focuses on a single, well-defined concept
+- Can be answered directly and concisely
+- Doesn't require breaking down into sub-questions
+- Example: "What is the capital of France?"
+
+A 'medium' question:
+- Involves 2-3 related concepts
+- Benefits from some structured breakdown
+- Requires moderate explanation
+- Example: "How does climate change affect agriculture?"
+
+A 'complex' question:
+- Involves multiple interconnected concepts
+- Has several distinct facets or dimensions
+- Requires comprehensive explanation
+- Benefits from being broken into 3-5 sub-questions
+- Example: "What are the economic, social, and environmental impacts of artificial intelligence on global development, and how might these change over the next decade?"
+
+Respond with ONLY ONE of these three words: 'simple', 'medium', or 'complex'."""
+
+                # Get complexity assessment
+                try:
+                    complexity_message = client.messages.create(
+                        model=DEFAULT_MODEL,
+                        max_tokens=10,  # Very short response needed
+                        temperature=0,
+                        system=system_message_complexity,
+                        messages=[
+                            {"role": "user", "content": complexity_prompt}
+                        ]
+                    )
+                    
+                    complexity = extract_content(complexity_message).strip().lower()
+                    print(f"  Question complexity assessed as: {complexity}")
+                    
+                    # For simple questions, use a more direct approach
+                    if complexity == "simple":
+                        print("  Using direct answer approach for simple question.")
+                        system_message = """You are a helpful research assistant that provides clear, direct answers to simple questions.
+Format your response with semantic HTML tags for optimal readability and structure:
+
+1. Document Structure:
+- Use <h1> for the main title/topic
+- Use <p> for regular paragraphs
+- Use <strong> for emphasizing important terms or concepts
+- Use <ul> and <li> for lists when appropriate
+
+2. Formatting Guidelines:
+- Be direct and to the point
+- Provide a complete answer without unnecessary elaboration
+- Use clear, simple language
+- Include the most important information first
+
+3. Source Citations:
+- When referencing information from the provided sources, include a citation using the format [X] where X is the source number
+- DO NOT include a sources section at the end of your response - this will be handled separately
+
+Example structure:
+<h1>Direct Answer to Question</h1>
+<p>Clear explanation with <strong>key terms</strong> highlighted [1].</p>
+<p>Additional relevant information if needed [2].</p>"""
+
+                        prompt = f"""Context:
+{context}
+
+Question: {query}
+
+Please provide a direct, clear answer to this simple question based on the provided context.
+
+Guidelines:
+1. Be direct and to the point
+2. Provide a complete answer
+3. Use appropriate HTML formatting for readability
+4. Cite sources using [X] format
+5. DO NOT include a sources section at the end - this will be handled separately"""
+                    else:
+                        # Use standard comprehensive prompt for non-simple questions
+                        system_message = """You are a helpful research assistant that provides comprehensive, well-structured answers based on provided context.
+Format your response with semantic HTML tags for optimal readability and structure:
+
+1. Document Structure:
+- Use <h1> for the main title/topic
+- Use <h2> for major sections
+- Use <h3> for subsections when needed
+
+2. Content Sections:
+- Wrap each major section in <div class="section technology"> or <div class="section limitation"> based on content type
+- Use <p> for regular paragraphs
+- Use <strong> for emphasizing important terms or concepts
+- Use <ul> and <li> for lists
+- Use <blockquote> for notable quotes or definitions
+
+3. Formatting Guidelines:
+- Be comprehensive but clear
+- Use bullet points for lists of features, benefits, or steps
+- Break down complex topics into digestible sections
+- Use examples to illustrate concepts when helpful
+
+4. Source Citations:
+- When referencing information from the provided sources, include a citation using the format [X] where X is the source number
+- DO NOT include a sources section at the end of your response - this will be handled separately
+
+Example structure:
+<h1>Comprehensive Topic Overview</h1>
+<p>Thorough introduction with <strong>key terms</strong> highlighted [1].</p>
+
+<div class="section technology">
+    <h2>Major Section</h2>
+    <p>Detailed explanation [2].</p>
+    
+    <h3>Subsection</h3>
+    <ul>
+        <li>Detailed point 1 [3]</li>
+        <li>Detailed point 2 [1]</li>
+    </ul>
+</div>"""
+
+                        prompt = f"""Context:
+{context}
+
+Question: {query}
+
+Please provide a comprehensive answer to this question based on the provided context.
+
+Guidelines:
+1. Be thorough and well-structured
+2. Use appropriate HTML formatting for readability
+3. Cite sources using [X] format
+4. DO NOT include a sources section at the end - this will be handled separately"""
+                except Exception as e:
+                    print(f"ERROR during complexity assessment: {str(e)}. Using standard comprehensive prompt.")
+                    # Fall back to standard comprehensive prompt
+                    system_message = """You are a helpful research assistant that provides comprehensive, well-structured answers based on provided context.
+Format your response with semantic HTML tags for optimal readability and structure:
+
+1. Document Structure:
+- Use <h1> for the main title/topic
+- Use <h2> for major sections
+- Use <h3> for subsections when needed
+
+2. Content Sections:
+- Wrap each major section in <div class="section technology"> or <div class="section limitation"> based on content type
+- Use <p> for regular paragraphs
+- Use <strong> for emphasizing important terms or concepts
+- Use <ul> and <li> for lists
+- Use <blockquote> for notable quotes or definitions
+
+3. Formatting Guidelines:
+- Be comprehensive but clear
+- Use bullet points for lists of features, benefits, or steps
+- Break down complex topics into digestible sections
+- Use examples to illustrate concepts when helpful
+
+4. Source Citations:
+- When referencing information from the provided sources, include a citation using the format [X] where X is the source number
+- DO NOT include a sources section at the end of your response - this will be handled separately
+
+Example structure:
+<h1>Comprehensive Topic Overview</h1>
+<p>Thorough introduction with <strong>key terms</strong> highlighted [1].</p>
+
+<div class="section technology">
+    <h2>Major Section</h2>
+    <p>Detailed explanation [2].</p>
+    
+    <h3>Subsection</h3>
+    <ul>
+        <li>Detailed point 1 [3]</li>
+        <li>Detailed point 2 [1]</li>
+    </ul>
+</div>"""
+
+                    prompt = f"""Context:
+{context}
+
+Question: {query}
+
+Please provide a comprehensive answer to this question based on the provided context.
+
+Guidelines:
+1. Be thorough and well-structured
+2. Use appropriate HTML formatting for readability
+3. Cite sources using [X] format
+4. DO NOT include a sources section at the end - this will be handled separately"""
+            # Determine which prompt to use based on depth and conciseness for non-root questions
+            elif concise or depth >= 1:
                 # Use a more concise prompt for leaf nodes
                 system_message = """You are a helpful research assistant that provides concise, focused answers based on provided context.
 Format your response with semantic HTML tags for optimal readability and structure:
@@ -885,20 +1205,14 @@ Guidelines:
                 answer = response.content[0].text
                 print(f"  Received answer from Claude with length {len(answer)} characters.")
                 
-                # Add sources section to the answer
-                if sources:
-                    print(f"  Adding sources section with {len(sources)} sources...")
-                    sources_html = self._generate_sources_html(sources)
-                    
-                    # Check if the answer already has a sources section
-                    if "<h2>Sources</h2>" in answer or "<h3>Sources</h3>" in answer:
-                        print("  Answer already contains a sources section. Removing it...")
-                        answer = self._remove_sources_section(answer)
-                    
-                    # Add our sources section
-                    answer += f"\n\n{sources_html}"
-                else:
-                    print("  No sources available to add to the answer.")
+                # Check if the answer already has a sources section and remove it
+                if "<h2>Sources</h2>" in answer or "<h3>Sources</h3>" in answer:
+                    print("  Answer contains a sources section. Removing it...")
+                    answer = self._remove_sources_section(answer)
+                
+                # We're no longer adding the sources section at the bottom
+                # The sources are still tracked and available in the node data
+                # but we don't append them to the HTML output
                 
                 processing_time = time.time() - start_time
                 print(f"Answer generation completed in {processing_time:.2f} seconds.")
