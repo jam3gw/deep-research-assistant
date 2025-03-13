@@ -376,14 +376,18 @@
     background-color: #ddd;
 }
 
-.depth-3, .depth-4, .depth-5 {
+.depth-3,
+.depth-4,
+.depth-5 {
     position: relative;
     margin-left: 20px;
     border-left: 2px solid #ddd;
     padding-left: 20px;
 }
 
-.depth-3::before, .depth-4::before, .depth-5::before {
+.depth-3::before,
+.depth-4::before,
+.depth-5::before {
     content: '';
     position: absolute;
     top: 15px;
@@ -476,8 +480,13 @@
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .modal-content {
@@ -494,8 +503,15 @@
 }
 
 @keyframes slideIn {
-    from { transform: translateY(-20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 .modal-header {
@@ -537,7 +553,7 @@
         width: 95%;
         max-height: 90vh;
     }
-    
+
     .tree-container {
         padding: 10px;
     }
@@ -571,7 +587,7 @@
 }
 
 /* Tree node expanded state */
-.tree-node.expanded > .node-content {
+.tree-node.expanded>.node-content {
     border-left: 3px solid #4a90e2;
 }
 
@@ -595,4 +611,138 @@
     max-width: 300px;
     z-index: 100;
     pointer-events: none;
+}
+
+/* Update styles for sources in the tree visualization */
+.node-sources {
+    margin-top: 12px;
+}
+
+.sources-btn {
+    background-color: #f0f4f8;
+    border: 1px solid #d0d7de;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: #0969da;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    text-align: left;
+}
+
+.sources-btn:hover {
+    background-color: #e6ebf1;
+}
+
+.sources-btn::after {
+    content: "▼";
+    font-size: 0.7rem;
+    margin-left: 5px;
+}
+
+.sources-btn.active::after {
+    content: "▲";
+}
+
+.sources-list {
+    margin-top: 8px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border-left: 3px solid #0969da;
+    font-size: 0.9rem;
+}
+
+.sources-list h4 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: #24292f;
+    font-size: 1rem;
+}
+
+.sources-list ul {
+    margin: 0;
+    padding-left: 25px;
+    list-style-type: decimal;
+    list-style-position: outside;
+}
+
+.sources-list li {
+    margin-bottom: 8px;
+    padding-left: 5px;
+}
+
+.sources-list a {
+    color: #0969da;
+    text-decoration: none;
+    word-break: break-word;
+}
+
+.sources-list a:hover {
+    text-decoration: underline;
+}
+
+/* Add styles for sources in the final answer */
+.sources {
+    margin-top: 30px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #0969da;
+}
+
+.sources h2 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: #24292f;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sources h2::after {
+    content: "▼";
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.sources.collapsed h2::after {
+    content: "▲";
+}
+
+.sources ol {
+    margin: 0;
+    padding-left: 25px;
+    list-style-position: outside;
+}
+
+.sources-content {
+    display: block;
+    transition: max-height 0.3s ease-out;
+    overflow: hidden;
+}
+
+.sources.collapsed .sources-content {
+    display: none;
+}
+
+.sources li {
+    margin-bottom: 8px;
+    padding-left: 5px;
+}
+
+.sources a {
+    color: #0969da;
+    text-decoration: none;
+    word-break: break-word;
+}
+
+.sources a:hover {
+    text-decoration: underline;
 }

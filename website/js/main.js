@@ -152,6 +152,11 @@ document.addEventListener('DOMContentLoaded', function () {
         // Invoke Lambda directly via Function URL
         invokeLambda(requestData)
             .then(data => {
+                // Check if data is valid
+                if (!data || !data.explanation) {
+                    throw new Error('The research engine returned an incomplete response. Please try again.');
+                }
+
                 // Store current research data for sharing - DISABLED
                 currentResearchData = {
                     question: requestData.expression,
@@ -174,7 +179,23 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(error => {
                 console.error('Error:', error);
-                showError(error.message || 'An error occurred while processing your request. Please try again.');
+
+                // Provide more specific error messages based on the error
+                let errorMessage = error.message || 'An error occurred while processing your request. Please try again.';
+
+                // Check for specific error types
+                if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+                    errorMessage = 'The request timed out. Your question might be too complex. Please try a more specific question or try again later.';
+                } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+                    errorMessage = 'A network error occurred. Please check your internet connection and try again.';
+                } else if (errorMessage.includes('500')) {
+                    errorMessage = 'The research engine encountered an internal error. Please try again with a different question.';
+                }
+
+                showError(errorMessage);
+
+                // Clear loading state
+                hideLoadingIndicators();
             })
             .finally(() => {
                 // Always hide loading indicator and enable submit button
@@ -182,6 +203,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 loadingIndicator.classList.remove('active');
             });
     });
+
+    /**
+     * Hides all loading indicators
+     */
+    function hideLoadingIndicators() {
+        submitButton.disabled = false;
+        loadingIndicator.classList.remove('active');
+    }
 
     // Function to display results
     function displayResults(data) {
@@ -199,6 +228,19 @@ document.addEventListener('DOMContentLoaded', function () {
         if (data.explanation) {
             answerContent.innerHTML = data.explanation;
             console.log('Set answer content');
+
+            // Add source summary if available
+            if (data.sources_metadata && data.all_sources && data.all_sources.length > 0) {
+                addSourceSummary(answerContent, data.sources_metadata, data.all_sources);
+            }
+
+            // Add sources section to the final answer if not already present
+            if (data.all_sources && data.all_sources.length > 0) {
+                addSourcesSection(answerContent, data.all_sources);
+            }
+
+            // Enhance source links in the final answer
+            enhanceSourceLinks(answerContent);
         } else {
             console.warn('No explanation found in data');
             answerContent.innerHTML = '<p>No explanation available for this research.</p>';
@@ -217,6 +259,313 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Scroll to results
         resultsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    /**
+     * Adds a source summary to the final answer
+     * @param {HTMLElement} container - The container with the answer HTML
+     * @param {Object} sourcesMetadata - Metadata about the sources
+     * @param {Array} allSources - All sources
+     */
+    function addSourceSummary(container, sourcesMetadata, allSources) {
+        // Create summary element
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = 'source-summary';
+
+        // Get top sources
+        const topSources = sourcesMetadata.most_frequent_sources || [];
+
+        // Create summary content
+        summaryDiv.innerHTML = `
+            <h3>Source Summary</h3>
+            <p>This research is based on <strong>${sourcesMetadata.total_sources}</strong> unique sources.</p>
+            ${topSources.length > 0 ? `
+                <p>Most frequently referenced sources:</p>
+                <ul class="top-sources">
+                    ${topSources.slice(0, 3).map(source => `
+                        <li>
+                            <a href="${source.url}" target="_blank" rel="noopener noreferrer">${source.title}</a>
+                            ${source.frequency > 1 ? ` (Referenced ${source.frequency} times)` : ''}
+                        </li>
+                    `).join('')}
+                </ul>
+            ` : ''}
+        `;
+
+        // Add styles
+        const style = document.createElement('style');
+        style.textContent = `
+            .source-summary {
+                background-color: #f0f7ff;
+                border-left: 3px solid #0969da;
+                padding: 15px;
+                margin: 20px 0;
+                border-radius: 4px;
+            }
+            
+            .source-summary h3 {
+                margin-top: 0;
+                color: #0969da;
+                font-size: 1.1rem;
+            }
+            
+            .top-sources {
+                margin-top: 10px;
+                padding-left: 20px;
+            }
+            
+            .top-sources li {
+                margin-bottom: 5px;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Insert after the first heading or at the beginning
+        const firstHeading = container.querySelector('h1, h2');
+        if (firstHeading) {
+            firstHeading.after(summaryDiv);
+        } else {
+            container.prepend(summaryDiv);
+        }
+    }
+
+    /**
+     * Adds a sources section to the final answer if not already present
+     * @param {HTMLElement} container - The container with the answer HTML
+     * @param {Array} sources - Array of source objects with url and title properties
+     */
+    function addSourcesSection(container, sources) {
+        // Check if sources section already exists
+        if (!container.querySelector('.sources')) {
+            // Create sources section
+            const sourcesDiv = document.createElement('div');
+            sourcesDiv.className = 'sources';
+
+            // Create heading
+            const heading = document.createElement('h2');
+            heading.textContent = `Sources (${sources.length})`;
+            sourcesDiv.appendChild(heading);
+
+            // Create content wrapper
+            const contentWrapper = document.createElement('div');
+            contentWrapper.className = 'sources-content';
+
+            // Add source filtering options if there are many sources
+            if (sources.length > 5) {
+                const filterOptions = document.createElement('div');
+                filterOptions.className = 'source-filter-options';
+                filterOptions.innerHTML = `
+                    <div class="filter-label">Sort by:</div>
+                    <button class="filter-btn active" data-sort="relevance">Relevance</button>
+                    <button class="filter-btn" data-sort="frequency">Frequency</button>
+                    <button class="filter-btn" data-sort="alphabetical">Alphabetical</button>
+                `;
+
+                // Add event listeners for filter buttons
+                filterOptions.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        // Remove active class from all buttons
+                        filterOptions.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                        // Add active class to clicked button
+                        this.classList.add('active');
+
+                        // Sort sources based on selected option
+                        const sortBy = this.getAttribute('data-sort');
+                        const sourcesList = contentWrapper.querySelector('ol');
+                        const sourceItems = Array.from(sourcesList.querySelectorAll('li'));
+
+                        sourceItems.sort((a, b) => {
+                            const aData = JSON.parse(a.getAttribute('data-source') || '{}');
+                            const bData = JSON.parse(b.getAttribute('data-source') || '{}');
+
+                            if (sortBy === 'relevance') {
+                                return (bData.relevance || 0) - (aData.relevance || 0);
+                            } else if (sortBy === 'frequency') {
+                                return (bData.frequency || 0) - (aData.frequency || 0);
+                            } else {
+                                return (aData.title || '').localeCompare(bData.title || '');
+                            }
+                        });
+
+                        // Re-append sorted items
+                        sourceItems.forEach(item => sourcesList.appendChild(item));
+                    });
+                });
+
+                contentWrapper.appendChild(filterOptions);
+            }
+
+            // Create ordered list
+            const ol = document.createElement('ol');
+
+            // Add each source with metadata
+            sources.forEach(source => {
+                const li = document.createElement('li');
+
+                // Store source data for sorting
+                li.setAttribute('data-source', JSON.stringify({
+                    url: source.url,
+                    title: source.title,
+                    relevance: source.relevance || 0,
+                    frequency: source.frequency || 0
+                }));
+
+                // Create link
+                const a = document.createElement('a');
+                a.href = source.url;
+                a.textContent = source.title;
+                a.setAttribute('target', '_blank');
+                a.setAttribute('rel', 'noopener noreferrer');
+                li.appendChild(a);
+
+                // Add metadata if available
+                if (source.frequency > 1 || source.relevance) {
+                    const metadata = document.createElement('span');
+                    metadata.className = 'source-metadata';
+
+                    let metadataText = [];
+                    if (source.frequency > 1) {
+                        metadataText.push(`Referenced ${source.frequency} times`);
+                    }
+                    if (source.relevance) {
+                        const relevanceScore = Math.round(source.relevance * 10) / 10;
+                        metadataText.push(`Relevance: ${relevanceScore}`);
+                    }
+
+                    metadata.textContent = ` (${metadataText.join(', ')})`;
+                    li.appendChild(metadata);
+                }
+
+                // Add to list
+                ol.appendChild(li);
+            });
+
+            contentWrapper.appendChild(ol);
+            sourcesDiv.appendChild(contentWrapper);
+            container.appendChild(sourcesDiv);
+
+            // Add CSS for new elements
+            addSourcesSectionStyles();
+        }
+    }
+
+    /**
+     * Adds CSS styles for the enhanced sources section
+     */
+    function addSourcesSectionStyles() {
+        // Check if styles already exist
+        if (!document.getElementById('sources-section-styles')) {
+            const style = document.createElement('style');
+            style.id = 'sources-section-styles';
+            style.textContent = `
+                .source-filter-options {
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 15px;
+                    padding: 10px;
+                    background-color: #f5f8fa;
+                    border-radius: 4px;
+                }
+                
+                .filter-label {
+                    margin-right: 10px;
+                    font-size: 0.9rem;
+                    color: #555;
+                }
+                
+                .filter-btn {
+                    background-color: #f0f4f8;
+                    border: 1px solid #d0d7de;
+                    border-radius: 4px;
+                    padding: 5px 10px;
+                    margin-right: 5px;
+                    font-size: 0.8rem;
+                    cursor: pointer;
+                    color: #0969da;
+                    transition: all 0.2s;
+                }
+                
+                .filter-btn:hover {
+                    background-color: #e6ebf1;
+                }
+                
+                .filter-btn.active {
+                    background-color: #0969da;
+                    color: white;
+                    border-color: #0969da;
+                }
+                
+                .source-metadata {
+                    font-size: 0.85rem;
+                    color: #666;
+                    font-style: italic;
+                }
+                
+                .sources ol li {
+                    margin-bottom: 12px;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    /**
+     * Enhances source links in the final answer by adding target="_blank" and rel="noopener noreferrer"
+     * and implementing dropdown functionality
+     * @param {HTMLElement} container - The container with the answer HTML
+     */
+    function enhanceSourceLinks(container) {
+        // Find the sources section
+        const sourcesDiv = container.querySelector('.sources');
+        if (sourcesDiv) {
+            console.log('Found sources section in final answer');
+
+            // Add security attributes to all links
+            const links = sourcesDiv.querySelectorAll('a');
+            links.forEach(link => {
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+            });
+
+            // Implement dropdown functionality
+            const sourcesHeading = sourcesDiv.querySelector('h2');
+            if (sourcesHeading) {
+                // Check if the sources-content wrapper already exists
+                let contentWrapper = sourcesDiv.querySelector('.sources-content');
+
+                // If the wrapper doesn't exist, create it
+                if (!contentWrapper) {
+                    // Create a wrapper for the content to be toggled
+                    const contentElements = Array.from(sourcesDiv.children).filter(el => el.tagName !== 'H2');
+                    contentWrapper = document.createElement('div');
+                    contentWrapper.className = 'sources-content';
+
+                    // Move content elements into the wrapper
+                    contentElements.forEach(el => {
+                        contentWrapper.appendChild(el);
+                    });
+
+                    // Add the wrapper after the heading
+                    sourcesHeading.after(contentWrapper);
+                }
+
+                // Add click event to toggle
+                sourcesHeading.addEventListener('click', function () {
+                    sourcesDiv.classList.toggle('collapsed');
+                });
+
+                // Start with sources expanded by default
+                sourcesDiv.classList.remove('collapsed');
+
+                // Update heading to show source count
+                const sourceItems = sourcesDiv.querySelectorAll('ol > li');
+                if (sourceItems.length > 0) {
+                    sourcesHeading.textContent = `Sources (${sourceItems.length})`;
+                }
+            }
+        } else {
+            console.warn('No sources section found in final answer');
+        }
     }
 
     // Function to generate a shareable link - DISABLED
@@ -574,5 +923,25 @@ document.addEventListener('DOMContentLoaded', function () {
         document.head.appendChild(style);
 
         return toggle;
+    }
+
+    /**
+     * Handles the response from the API
+     * @param {Object} response - The response from the API
+     */
+    function handleResponse(response) {
+        console.log('Handling response:', response);
+
+        // Hide loading indicators
+        hideLoadingIndicators();
+
+        // Check if the response is valid
+        if (!response) {
+            showError('No response received from the server.');
+            return;
+        }
+
+        // Display the results
+        displayResults(response);
     }
 }); 

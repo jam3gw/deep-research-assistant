@@ -7,10 +7,33 @@
 document.addEventListener('DOMContentLoaded', function () {
     console.log('Simple Tree Visualizer loaded');
 
+    // Add CSS for source frequency
+    addSourceFrequencyStyles();
+
     // Make sure the renderTreeVisualization function is globally available
     window.renderTreeVisualization = renderTreeVisualization;
     console.log('Tree visualization function registered globally');
 });
+
+/**
+ * Adds CSS styles for source frequency display
+ */
+function addSourceFrequencyStyles() {
+    // Check if styles already exist
+    if (!document.getElementById('source-frequency-styles')) {
+        const style = document.createElement('style');
+        style.id = 'source-frequency-styles';
+        style.textContent = `
+            .source-frequency {
+                font-size: 0.8rem;
+                color: #666;
+                margin-left: 5px;
+                font-style: italic;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
 
 /**
  * Renders a tree visualization using simple HTML/CSS
@@ -89,7 +112,7 @@ function renderTreeStructure(rootNode, container) {
     rootNodeElement.className = 'tree-node depth-0';
     rootNodeElement.setAttribute('data-node-id', rootNode.id || 'root');
 
-    rootNodeElement.innerHTML = `
+    let rootNodeContent = `
         <div class="node-content">
             <div class="node-header">
                 <span class="depth-indicator">Level 0</span>
@@ -98,102 +121,116 @@ function renderTreeStructure(rootNode, container) {
             <div class="node-question">${rootNode.question}</div>
             ${rootNode.answer ? `<button class="answer-btn" data-node-id="${rootNode.id || 'root'}">Show Answer</button>` : ''}
             <div class="node-answer" style="display: none;">${rootNode.answer || ''}</div>
+    `;
+
+    // Always add sources section, even if empty
+    rootNodeContent += `
+        <div class="node-sources">
+            <button class="sources-btn" data-node-id="${rootNode.id || 'root'}">Sources ${rootNode.sources && rootNode.sources.length > 0 ? `(${rootNode.sources.length})` : '(0)'}</button>
+            <div class="sources-list" style="display: none;">
+                <h4>Sources:</h4>
+    `;
+
+    if (rootNode.sources && rootNode.sources.length > 0) {
+        rootNodeContent += `
+                <ul>
+                    ${rootNode.sources.map((source, index) =>
+            `<li><a href="${source.url}" target="_blank" rel="noopener noreferrer">${source.title}</a></li>`
+        ).join('')}
+                </ul>
+        `;
+    } else {
+        rootNodeContent += `<p>No sources available for this node.</p>`;
+    }
+
+    rootNodeContent += `
+            </div>
         </div>
     `;
 
+    rootNodeContent += `</div>`;
+    rootNodeElement.innerHTML = rootNodeContent;
     container.appendChild(rootNodeElement);
 
-    // Store the answer for the root node if it exists
-    if (rootNode.answer) {
-        rootNodeElement.setAttribute('data-answer', rootNode.answer);
-    }
-
-    // Create a container for all Level 1 nodes
+    // Create container for level 1 nodes
     const level1Container = document.createElement('div');
-    level1Container.className = 'node-children';
-    level1Container.style.display = 'block'; // Always show Level 1 nodes
+    level1Container.className = 'level-1-container';
     rootNodeElement.appendChild(level1Container);
 
-    // If the root has children (Level 1 nodes), render them all at the top level
+    // Render level 1 nodes
     if (rootNode.children && rootNode.children.length > 0) {
-        rootNode.children.forEach(level1Node => {
-            // Create Level 1 node
-            const level1Element = document.createElement('div');
-            level1Element.className = 'tree-node depth-1';
-            level1Element.setAttribute('data-node-id', level1Node.id || `level1-${Math.random().toString(36).substr(2, 9)}`);
-
-            const hasChildren = level1Node.children && level1Node.children.length > 0;
-
-            level1Element.innerHTML = `
-                <div class="node-content">
-                    <div class="node-header">
-                        <span class="depth-indicator">Level 1</span>
-                        <button class="expand-btn">${hasChildren ? '-' : ''}</button>
-                    </div>
-                    <div class="node-question">${level1Node.question}</div>
-                    ${level1Node.answer ? `<button class="answer-btn" data-node-id="${level1Node.id || level1Element.getAttribute('data-node-id')}">Show Answer</button>` : ''}
-                    <div class="node-answer" style="display: none;">${level1Node.answer || ''}</div>
-                </div>
-            `;
-
-            level1Container.appendChild(level1Element);
-
-            // If Level 1 node has children, render them inside its node-children div
-            if (hasChildren) {
-                const childrenContainer = document.createElement('div');
-                childrenContainer.className = 'node-children';
-                childrenContainer.style.display = 'block'; // Show Level 2 nodes by default
-                level1Element.appendChild(childrenContainer);
-
-                level1Node.children.forEach(level2Node => {
-                    renderLevel2Node(level2Node, childrenContainer);
-                });
-            }
+        rootNode.children.forEach(childNode => {
+            renderLevel2Node(childNode, level1Container);
         });
     }
 
-    // Add event listeners
+    // Setup interactions
     setupTreeInteractions(container);
 }
 
 /**
- * Renders a Level 2 node and its children
- * @param {Object} node - The Level 2 node
+ * Renders a Level 1 node with its children
+ * @param {Object} node - The node to render
  * @param {HTMLElement} container - The container to render the node in
  */
 function renderLevel2Node(node, container) {
     if (!node) return;
 
-    const nodeId = node.id || `node-${Math.random().toString(36).substr(2, 9)}`;
-    const hasChildren = node.children && node.children.length > 0;
-
+    // Create the level 1 node
     const nodeElement = document.createElement('div');
-    nodeElement.className = 'tree-node depth-2';
-    nodeElement.setAttribute('data-node-id', nodeId);
+    nodeElement.className = 'tree-node depth-1';
+    nodeElement.setAttribute('data-node-id', node.id || `node-${Math.random()}`);
 
-    nodeElement.innerHTML = `
+    let nodeContent = `
         <div class="node-content">
             <div class="node-header">
-                <span class="depth-indicator">Level 2</span>
-                <button class="expand-btn" ${!hasChildren ? 'style="visibility: hidden;"' : ''}>+</button>
+                <span class="depth-indicator">Level 1</span>
+                <button class="expand-btn">${node.children && node.children.length > 0 ? '+' : '-'}</button>
             </div>
             <div class="node-question">${node.question}</div>
-            ${node.answer ? `<button class="answer-btn" data-node-id="${nodeId}">Show Answer</button>` : ''}
+            ${node.answer ? `<button class="answer-btn" data-node-id="${node.id}">Show Answer</button>` : ''}
             <div class="node-answer" style="display: none;">${node.answer || ''}</div>
+    `;
+
+    // Always add sources section, even if empty
+    nodeContent += `
+        <div class="node-sources">
+            <button class="sources-btn" data-node-id="${node.id}">Sources ${node.sources && node.sources.length > 0 ? `(${node.sources.length})` : '(0)'}</button>
+            <div class="sources-list" style="display: none;">
+                <h4>Sources:</h4>
+    `;
+
+    if (node.sources && node.sources.length > 0) {
+        nodeContent += `
+                <ul>
+                    ${node.sources.map((source, index) =>
+            `<li><a href="${source.url}" target="_blank" rel="noopener noreferrer">${source.title}</a></li>`
+        ).join('')}
+                </ul>
+        `;
+    } else {
+        nodeContent += `<p>No sources available for this node.</p>`;
+    }
+
+    nodeContent += `
+            </div>
         </div>
     `;
 
+    nodeContent += `</div>`;
+    nodeElement.innerHTML = nodeContent;
     container.appendChild(nodeElement);
 
-    // If this node has children, render them recursively
-    if (hasChildren) {
+    // Create container for children
+    if (node.children && node.children.length > 0) {
         const childrenContainer = document.createElement('div');
         childrenContainer.className = 'node-children';
-        childrenContainer.style.display = 'none'; // Hide deeper levels by default
+        childrenContainer.style.display = 'none'; // Initially hidden
         nodeElement.appendChild(childrenContainer);
 
+        // Render children
         node.children.forEach(childNode => {
-            renderChildNode(childNode, childrenContainer, 3); // Start at depth 3
+            renderChildNode(childNode, childrenContainer, 2);
         });
     }
 }
@@ -207,33 +244,64 @@ function renderLevel2Node(node, container) {
 function renderChildNode(node, container, depth) {
     if (!node) return;
 
-    const nodeId = node.id || `node-${Math.random().toString(36).substr(2, 9)}`;
-    const hasChildren = node.children && node.children.length > 0;
-
     const nodeElement = document.createElement('div');
     nodeElement.className = `tree-node depth-${depth}`;
-    nodeElement.setAttribute('data-node-id', nodeId);
+    nodeElement.setAttribute('data-node-id', node.id || `node-${Math.random()}`);
 
-    nodeElement.innerHTML = `
+    // Create the node content
+    let nodeContent = `
         <div class="node-content">
             <div class="node-header">
                 <span class="depth-indicator">Level ${depth}</span>
-                ${hasChildren ? '<button class="expand-btn">+</button>' : ''}
+                <button class="expand-btn">${node.children && node.children.length > 0 ? '+' : '-'}</button>
             </div>
             <div class="node-question">${node.question}</div>
-            ${node.answer ? `<button class="answer-btn" data-node-id="${nodeId}">Show Answer</button>` : ''}
+            ${node.answer ? `<button class="answer-btn" data-node-id="${node.id}">Show Answer</button>` : ''}
             <div class="node-answer" style="display: none;">${node.answer || ''}</div>
-        </div>
-        ${hasChildren ? '<div class="node-children" style="display: none;"></div>' : ''}
     `;
+
+    // Always add sources section, even if empty
+    nodeContent += `
+        <div class="node-sources">
+            <button class="sources-btn" data-node-id="${node.id}">Sources ${node.sources && node.sources.length > 0 ? `(${node.sources.length})` : '(0)'}</button>
+            <div class="sources-list" style="display: none;">
+                <h4>Sources:</h4>
+    `;
+
+    if (node.sources && node.sources.length > 0) {
+        nodeContent += `
+                <ul>
+                    ${node.sources.map((source, index) =>
+            `<li>
+                <a href="${source.url}" target="_blank" rel="noopener noreferrer">${source.title}</a>
+                ${source.frequency > 1 ? `<span class="source-frequency">(Referenced ${source.frequency} times)</span>` : ''}
+            </li>`
+        ).join('')}
+                </ul>
+        `;
+    } else {
+        nodeContent += `<p>No sources available for this node.</p>`;
+    }
+
+    nodeContent += `
+            </div>
+        </div>
+    `;
+
+    nodeContent += `</div>`;
+    nodeElement.innerHTML = nodeContent;
 
     container.appendChild(nodeElement);
 
-    // If this node has children, render them recursively
-    if (hasChildren) {
-        const childrenContainer = nodeElement.querySelector('.node-children');
-        node.children.forEach(childNode => {
-            renderChildNode(childNode, childrenContainer, depth + 1);
+    // Render children if any
+    if (node.children && node.children.length > 0) {
+        const childrenContainer = document.createElement('div');
+        childrenContainer.className = 'node-children';
+        childrenContainer.style.display = 'none'; // Initially hidden
+        nodeElement.appendChild(childrenContainer);
+
+        node.children.forEach(child => {
+            renderChildNode(child, childrenContainer, depth + 1);
         });
     }
 }
@@ -243,46 +311,74 @@ function renderChildNode(node, container, depth) {
  * @param {HTMLElement} container - The tree container
  */
 function setupTreeInteractions(container) {
-    // Setup expand/collapse buttons
-    const expandButtons = container.querySelectorAll('.expand-btn');
-    expandButtons.forEach(button => {
-        // Skip empty buttons (those with no text content)
-        if (!button.textContent.trim()) return;
+    // Expand/collapse functionality
+    container.addEventListener('click', function (event) {
+        if (event.target.classList.contains('expand-btn')) {
+            const nodeElement = event.target.closest('.tree-node');
+            const childrenContainer = nodeElement.querySelector('.node-children');
 
-        button.addEventListener('click', function () {
-            const node = this.closest('.tree-node');
-            const children = node.querySelector('.node-children');
-
-            if (!children) return;
-
-            if (children.style.display === 'none') {
-                children.style.display = 'block';
-                this.textContent = '-';
-                node.classList.add('expanded');
-            } else {
-                children.style.display = 'none';
-                this.textContent = '+';
-                node.classList.remove('expanded');
+            if (childrenContainer) {
+                const isExpanded = childrenContainer.style.display !== 'none';
+                childrenContainer.style.display = isExpanded ? 'none' : 'block';
+                event.target.textContent = isExpanded ? '+' : '-';
             }
-        });
+        }
+
+        // Show/hide answer functionality
+        if (event.target.classList.contains('answer-btn')) {
+            const nodeId = event.target.getAttribute('data-node-id');
+            const nodeElement = event.target.closest('.tree-node');
+            const answerElement = nodeElement.querySelector('.node-answer');
+
+            const isVisible = answerElement.style.display !== 'none';
+            answerElement.style.display = isVisible ? 'none' : 'block';
+            event.target.textContent = isVisible ? 'Show Answer' : 'Hide Answer';
+
+            // If showing the answer, remove any sources section from the answer HTML
+            if (!isVisible) {
+                removeSourcesSectionFromAnswer(answerElement);
+            }
+        }
+
+        // Show/hide sources functionality
+        if (event.target.classList.contains('sources-btn')) {
+            const nodeElement = event.target.closest('.tree-node');
+            const sourcesElement = nodeElement.querySelector('.sources-list');
+
+            const isVisible = sourcesElement.style.display !== 'none';
+            sourcesElement.style.display = isVisible ? 'none' : 'block';
+            event.target.classList.toggle('active');
+        }
     });
 
-    // Setup answer buttons
-    const answerButtons = container.querySelectorAll('.answer-btn');
-    answerButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const nodeId = this.getAttribute('data-node-id');
-            const node = container.querySelector(`.tree-node[data-node-id="${nodeId}"]`);
-            const question = node.querySelector('.node-question').textContent;
-            const answer = node.querySelector('.node-answer').innerHTML;
+    // Initialize all sources buttons with accurate counts and consistent styling
+    const sourcesButtons = container.querySelectorAll('.sources-btn');
+    sourcesButtons.forEach(button => {
+        const nodeElement = button.closest('.tree-node');
+        const sourcesElement = nodeElement.querySelector('.sources-list');
+        const sourcesList = sourcesElement.querySelector('ul');
 
-            // Show the answer in the modal
-            const modal = document.getElementById('answer-modal');
-            modal.querySelector('.modal-title').textContent = question;
-            modal.querySelector('.modal-body').innerHTML = answer;
-            modal.style.display = 'block';
-        });
+        // Update button text to show number of sources
+        if (sourcesList) {
+            const sourceCount = sourcesList.children.length;
+            button.textContent = `Sources (${sourceCount})`;
+        } else {
+            button.textContent = 'Sources (0)';
+        }
     });
+}
+
+/**
+ * Removes any sources section from the answer HTML
+ * @param {HTMLElement} answerElement - The answer element
+ */
+function removeSourcesSectionFromAnswer(answerElement) {
+    // Find any sources section in the answer HTML
+    const sourcesSection = answerElement.querySelector('.sources');
+    if (sourcesSection) {
+        // Remove the sources section
+        sourcesSection.remove();
+    }
 }
 
 /**
@@ -338,6 +434,63 @@ function showErrorMessage(container, message) {
             <p>${message}</p>
         </div>
     `;
+}
+
+/**
+ * Renders the tree visualization on the client side
+ * @param {Object} treeData - The tree data from the API
+ * @param {Object} metadata - Metadata about the tree
+ */
+function renderClientSideTree(treeData, metadata) {
+    console.log('Rendering client-side tree with data:', treeData);
+
+    // Get the container
+    const container = document.getElementById('tree-visualization');
+    if (!container) {
+        console.error('Tree visualization container not found');
+        return;
+    }
+
+    // Clear the container
+    container.innerHTML = '';
+
+    // Create the tree metadata section
+    const metadataSection = document.createElement('div');
+    metadataSection.className = 'tree-metadata';
+
+    // Add metadata information
+    if (metadata) {
+        metadataSection.innerHTML = `
+            <div class="metadata-item">
+                <span class="metadata-label">Total Nodes:</span>
+                <span class="metadata-value">${metadata.total_nodes || 'N/A'}</span>
+            </div>
+            <div class="metadata-item">
+                <span class="metadata-label">Max Depth:</span>
+                <span class="metadata-value">${metadata.max_depth || 'N/A'}</span>
+            </div>
+            <div class="metadata-item">
+                <span class="metadata-label">Processing Time:</span>
+                <span class="metadata-value">${metadata.processing_time || 'N/A'}</span>
+            </div>
+        `;
+    }
+
+    // Add metadata section to container
+    container.appendChild(metadataSection);
+
+    // Create the tree container
+    const treeContainer = document.createElement('div');
+    treeContainer.className = 'tree-container';
+    container.appendChild(treeContainer);
+
+    // Render the tree structure
+    renderTreeStructure(treeData, treeContainer);
+
+    // Setup interactions
+    setupTreeInteractions(treeContainer);
+
+    console.log('Tree visualization rendered');
 }
 
 // Export the render function for use in other files

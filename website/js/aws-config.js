@@ -25,6 +25,8 @@ const lambdaConfig = {
 // Function to invoke Lambda directly via Function URL
 async function invokeLambda(params) {
     try {
+        console.log('Invoking Lambda with params:', params);
+
         const response = await fetch(lambdaConfig.functionUrl, {
             method: 'POST',
             headers: {
@@ -34,13 +36,40 @@ async function invokeLambda(params) {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Lambda invocation failed: ${response.status} ${response.statusText}. ${errorText}`);
+            let errorMessage = `Lambda invocation failed: ${response.status} ${response.statusText}`;
+
+            try {
+                // Try to parse the error response as JSON
+                const errorData = await response.json();
+                console.error('Lambda error details:', errorData);
+
+                if (errorData && errorData.error) {
+                    errorMessage += `. ${errorData.error}`;
+                }
+            } catch (parseError) {
+                // If we can't parse as JSON, get the text
+                try {
+                    const errorText = await response.text();
+                    errorMessage += `. ${errorText}`;
+                } catch (textError) {
+                    console.error('Could not read error response text:', textError);
+                }
+            }
+
+            throw new Error(errorMessage);
         }
 
-        return await response.json();
+        const result = await response.json();
+        console.log('Lambda response:', result);
+        return result;
     } catch (error) {
         console.error('Error invoking Lambda:', error);
-        throw error;
+
+        // Provide a more user-friendly error message
+        if (error.message.includes("'answer'")) {
+            throw new Error('The research engine encountered an issue generating an answer. Please try again with a more specific question.');
+        } else {
+            throw error;
+        }
     }
 } 
