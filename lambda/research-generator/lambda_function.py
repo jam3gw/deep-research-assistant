@@ -110,12 +110,28 @@ def lambda_handler(event, context):
                 
                 # Check if sources section is missing and add it if necessary
                 if all_sources:
-                    # Instead of adding sources to the HTML, we'll include them in the response JSON
-                    # The frontend will handle displaying the sources
-                    pass
+                    # Check if the final answer already has a sources section
+                    if "<div class=\"sources\">" not in final_answer and "<div class='sources'>" not in final_answer:
+                        # Add all sources to the final answer
+                        sources_html = "<div class=\"sources\"><h2>Sources</h2><ol>"
+                        for source in all_sources:
+                            sources_html += f"<li>{source.get('title', 'Untitled')} - <a href=\"{source.get('url', '#')}\">{source.get('url', '#')}</a></li>"
+                        sources_html += "</ol></div>"
+                        final_answer += f"\n\n{sources_html}"
+                    else:
+                        print("Final answer already has a sources section")
             else:
                 # If no breakdown, use the direct answer
                 final_answer = question_tree.get('answer', "No answer was generated. Please try again with a more specific question.")
+                
+                # Add sources section if missing
+                if all_sources and "<div class=\"sources\">" not in final_answer and "<div class='sources'>" not in final_answer:
+                    # Add all sources to the final answer
+                    sources_html = "<div class=\"sources\"><h2>Sources</h2><ol>"
+                    for source in all_sources:
+                        sources_html += f"<li>{source.get('title', 'Untitled')} - <a href=\"{source.get('url', '#')}\">{source.get('url', '#')}</a></li>"
+                    sources_html += "</ol></div>"
+                    final_answer += f"\n\n{sources_html}"
             
             # Calculate metadata for the frontend
             metadata = {
