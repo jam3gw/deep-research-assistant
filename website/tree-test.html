@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Visualization Test Suite</title>
+    <link rel="stylesheet" href="css/tree-visualizer.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+        }
+
+        .tab-button.active {
+            color: #3498db;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        #tree-visualization {
+            min-height: 600px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .test-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .test-button:hover {
+            background-color: #2980b9;
+        }
+
+        .debug-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .debug-panel h3 {
+            margin-top: 0;
+        }
+
+        pre {
+            background-color: #f1f1f1;
+            padding: 10px;
+            border-radius: 4px;
+            overflow: auto;
+            max-height: 300px;
+        }
+
+        .debug-info {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow: auto;
+        }
+
+        .json-editor {
+            width: 100%;
+            height: 300px;
+            font-family: monospace;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Tree Visualization Test Suite</h1>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="visualization">Tree Visualization</button>
+            <button class="tab-button" data-tab="json-editor">JSON Editor</button>
+            <button class="tab-button" data-tab="debug">Debug Info</button>
+        </div>
+
+        <div class="tab-content">
+            <div id="visualization-tab" class="tab-pane active">
+                <div class="debug-info" id="debug-info">
+                    <p>Tree visualization function available: <span id="tree-viz-available">Checking...</span></p>
+                </div>
+
+                <div class="test-buttons">
+                    <button id="simple-test-button" class="test-button">Simple Tree Test</button>
+                    <button id="complex-test-button" class="test-button">Complex Tree Test</button>
+                    <button id="long-answer-button" class="test-button">Long Answers Test</button>
+                </div>
+
+                <div id="tree-visualization"></div>
+            </div>
+
+            <div id="json-editor-tab" class="tab-pane">
+                <h3>Edit JSON Data</h3>
+                <p>Modify the tree structure below and click "Render Custom Tree" to test your changes:</p>
+                <textarea id="json-editor" class="json-editor"></textarea>
+                <button id="render-custom-button" class="test-button">Render Custom Tree</button>
+            </div>
+
+            <div id="debug-tab" class="tab-pane">
+                <div class="debug-panel">
+                    <h3>Sample Data</h3>
+                    <pre id="sample-data-json"></pre>
+                </div>
+                <div class="debug-panel">
+                    <h3>Console Output</h3>
+                    <pre id="console-output"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load tree visualization -->
+    <script src="js/tree-visualizer.js"></script>
+
+    <!-- Load test utilities -->
+    <script src="js/test-utils.js"></script>
+
+    <script>
+        // Override console.log to capture output
+        const originalConsoleLog = console.log;
+        const consoleOutput = document.getElementById('console-output');
+        console.log = function () {
+            // Call original console.log
+            originalConsoleLog.apply(console, arguments);
+
+            // Add to our debug panel
+            const args = Array.from(arguments);
+            const message = args.map(arg => {
+                if (typeof arg === 'object') {
+                    try {
+                        return JSON.stringify(arg, null, 2);
+                    } catch (e) {
+                        return String(arg);
+                    }
+                }
+                return String(arg);
+            }).join(' ');
+
+            if (consoleOutput) {
+                consoleOutput.textContent += message + '\n';
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const treeVizAvailableSpan = document.getElementById('tree-viz-available');
+            const debugInfo = document.getElementById('debug-info');
+            const jsonEditor = document.getElementById('json-editor');
+            const sampleDataJson = document.getElementById('sample-data-json');
+
+            // Check if tree visualization function is available
+            if (typeof renderTreeVisualization === 'function') {
+                treeVizAvailableSpan.textContent = 'Yes';
+                treeVizAvailableSpan.style.color = 'green';
+            } else {
+                treeVizAvailableSpan.textContent = 'No';
+                treeVizAvailableSpan.style.color = 'red';
+            }
+
+            // Tab switching
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabPanes = document.querySelectorAll('.tab-pane');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    // Remove active class from all buttons and panes
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabPanes.forEach(pane => pane.classList.remove('active'));
+
+                    // Add active class to current button and corresponding pane
+                    this.classList.add('active');
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                });
+            });
+
+            // Simple test button
+            document.getElementById('simple-test-button').addEventListener('click', function () {
+                console.log('Simple test button clicked');
+                addLogEntry('Simple test button clicked');
+
+                if (typeof renderTreeVisualization === 'function' && window.testData && window.testData.simple) {
+                    try {
+                        renderTreeVisualization(window.testData.simple.tree, window.testData.simple.metadata);
+                        addSuccessLogEntry('Simple tree visualization rendered successfully');
+                    } catch (error) {
+                        console.error('Error rendering simple tree:', error);
+                        addErrorLogEntry('Error rendering simple tree: ' + error.message);
+                    }
+                } else {
+                    addErrorLogEntry('Simple test data or visualization function not available');
+                }
+            });
+
+            // Complex test button
+            document.getElementById('complex-test-button').addEventListener('click', function () {
+                console.log('Complex test button clicked');
+                addLogEntry('Complex test button clicked');
+
+                if (typeof renderTreeVisualization === 'function' && window.testData && window.testData.complex) {
+                    try {
+                        renderTreeVisualization(window.testData.complex.tree, window.testData.complex.metadata);
+                        addSuccessLogEntry('Complex tree visualization rendered successfully');
+                    } catch (error) {
+                        console.error('Error rendering complex tree:', error);
+                        addErrorLogEntry('Error rendering complex tree: ' + error.message);
+                    }
+                } else {
+                    addErrorLogEntry('Complex test data or visualization function not available');
+                }
+            });
+
+            // Long answers test button
+            document.getElementById('long-answer-button').addEventListener('click', function () {
+                console.log('Long answer test button clicked');
+                addLogEntry('Long answer test button clicked');
+
+                if (typeof renderTreeVisualization === 'function' && window.testData && window.testData.longAnswer) {
+                    try {
+                        renderTreeVisualization(window.testData.longAnswer.tree, window.testData.longAnswer.metadata);
+                        addSuccessLogEntry('Long answer tree visualization rendered successfully');
+                    } catch (error) {
+                        console.error('Error rendering long answer tree:', error);
+                        addErrorLogEntry('Error rendering long answer tree: ' + error.message);
+                    }
+                } else {
+                    addErrorLogEntry('Long answer test data or visualization function not available');
+                }
+            });
+
+            // Custom JSON render button
+            document.getElementById('render-custom-button').addEventListener('click', function () {
+                console.log('Custom JSON render button clicked');
+                addLogEntry('Custom JSON render button clicked');
+
+                try {
+                    const customData = JSON.parse(jsonEditor.value);
+
+                    if (!customData.tree || !customData.metadata) {
+                        throw new Error('JSON must contain "tree" and "metadata" properties');
+                    }
+
+                    renderTreeVisualization(customData.tree, customData.metadata);
+                    addSuccessLogEntry('Custom tree visualization rendered successfully');
+
+                    // Switch to visualization tab
+                    tabButtons[0].click();
+                } catch (error) {
+                    console.error('Error rendering custom tree:', error);
+                    addErrorLogEntry('Error rendering custom tree: ' + error.message);
+                }
+            });
+
+            // Initialize with sample data
+            if (window.testData) {
+                // Set sample data in JSON editor
+                jsonEditor.value = JSON.stringify({
+                    tree: window.testData.simple.tree,
+                    metadata: window.testData.simple.metadata
+                }, null, 2);
+
+                // Display sample data in debug panel
+                if (sampleDataJson) {
+                    sampleDataJson.textContent = JSON.stringify(window.testData.simple, null, 2);
+                }
+            }
+
+            // Helper functions for logging
+            function addLogEntry(message) {
+                const logEntry = document.createElement('p');
+                logEntry.textContent = message + ' at ' + new Date().toLocaleTimeString();
+                debugInfo.appendChild(logEntry);
+            }
+
+            function addSuccessLogEntry(message) {
+                const successLogEntry = document.createElement('p');
+                successLogEntry.textContent = message + ' at ' + new Date().toLocaleTimeString();
+                successLogEntry.style.color = 'green';
+                debugInfo.appendChild(successLogEntry);
+            }
+
+            function addErrorLogEntry(message) {
+                const errorLogEntry = document.createElement('p');
+                errorLogEntry.textContent = message + ' at ' + new Date().toLocaleTimeString();
+                errorLogEntry.style.color = 'red';
+                debugInfo.appendChild(errorLogEntry);
+            }
+        });
+    </script>
+</body>
+
+</html>
