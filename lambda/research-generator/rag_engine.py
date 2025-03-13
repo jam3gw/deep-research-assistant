@@ -197,20 +197,43 @@ Example structure:
 <p class="body-text">Additional relevant information if needed.</p>"""
 
         # Complexity assessment system message
-        self.system_message_complexity = """You are an AI assistant that analyzes questions to determine their complexity.
-Your task is to categorize questions as 'simple', 'medium', or 'complex' based on:
+        self.system_message_complexity = """You are an AI assistant that analyzes questions to determine their complexity level.
+Your task is to categorize questions on a scale from 1 to 5 based on:
 1. The number of distinct concepts or topics involved
 2. The depth of knowledge required to answer comprehensively
 3. Whether the question has multiple facets or dimensions
 4. The scope of the question (narrow vs. broad)
 5. The level of specificity vs. generality
 
-Respond with ONLY ONE of these three words: 'simple', 'medium', or 'complex'."""
+Complexity levels:
+1 - Very Simple: Straightforward factual questions with single, direct answers
+2 - Simple: Questions with clear focus but requiring some explanation
+3 - Moderate: Questions with multiple aspects that benefit from some breakdown
+4 - Complex: Multifaceted questions requiring comprehensive analysis
+5 - Very Complex: Sophisticated questions with many interconnected dimensions
+
+Respond with ONLY ONE number from 1 to 5."""
 
         # Sub-question generator system message
-        self.sub_question_system_message = """You are a research assistant tasked with breaking down complex questions into focused, concise sub-questions.
-Your responses should contain ONLY the sub-questions, one per line, with no additional text, prefixes, or explanations.
-Each sub-question should be specific, focused, and directly answerable."""
+        self.sub_question_system_message = """You are a research assistant specialized in breaking down complex questions into much simpler sub-questions.
+
+Your PRIMARY GOAL is to create sub-questions that are SIGNIFICANTLY LESS COMPLEX than the main question.
+
+When generating sub-questions:
+1. Each sub-question MUST be substantially simpler than the original question
+2. Break complex concepts into their most basic components
+3. Focus on a single, narrow aspect per sub-question
+4. Use simpler vocabulary and more straightforward sentence structure
+5. Make each sub-question more concrete and specific
+6. Ensure each sub-question can be answered directly without further breakdown
+
+AVOID:
+- Creating sub-questions that are still complex
+- Using technical jargon unless absolutely necessary
+- Introducing new complexity or broadening the scope
+- Creating sub-questions that require their own breakdown
+
+Your responses should contain ONLY the sub-questions, one per line, with no additional text, prefixes, or explanations."""
     
     def set_openai_key(self, api_key: str):
         """Set the OpenAI API key and initialize the client."""
@@ -499,22 +522,24 @@ Each sub-question should be specific, focused, and directly answerable."""
         
         complexity_prompt = f"""Question: {question}
 
-Analyze this question and determine if it is 'simple' or 'complex'.
+Analyze this question and determine its complexity level on a scale from 1 to 5:
 
-A 'simple' question:
-- Focuses on a single, well-defined concept
-- Can be answered directly and concisely
-- Doesn't require breaking down into sub-questions
-- Example: "What is the capital of France?"
+1 - Very Simple: A straightforward factual question with a single, direct answer
+   Example: "What is the capital of France?"
 
-A 'complex' question:
-- Involves multiple interconnected concepts
-- Has several distinct facets or dimensions
-- Requires comprehensive explanation
-- Benefits from being broken into 2-4 sub-questions
-- Example: "What are the economic, social, and environmental impacts of artificial intelligence on global development, and how might these change over the next decade?"
+2 - Simple: A question with a clear focus but might require some explanation
+   Example: "How does photosynthesis work?"
 
-Respond with ONLY ONE of these two words: 'simple' or 'complex'."""
+3 - Moderate: A question with multiple aspects that benefits from some breakdown
+   Example: "What were the main causes of World War I?"
+
+4 - Complex: A multifaceted question requiring comprehensive analysis
+   Example: "How has artificial intelligence impacted the global economy?"
+
+5 - Very Complex: A sophisticated question with many interconnected dimensions
+   Example: "What are the economic, social, environmental, and ethical implications of gene editing technologies, and how might these evolve over the next decade?"
+
+Respond with ONLY ONE number from 1 to 5 representing the complexity level."""
 
         # Get complexity assessment
         try:
@@ -560,14 +585,34 @@ Guidelines:
 """
 
         # Determine number of sub-questions based on complexity
-        if complexity == "simple":
-            # For simple questions, we might not need sub-questions at all
-            # Return an empty list to indicate no breakdown needed
-            print("  Simple question detected. No sub-questions needed.")
+        try:
+            complexity_level = int(complexity.strip())
+        except (ValueError, AttributeError):
+            # Default to moderate complexity if parsing fails
+            print("  Warning: Could not parse complexity level. Defaulting to moderate (3).")
+            complexity_level = 3
+        
+        # Map complexity levels to sub-question ranges
+        if complexity_level <= 1:
+            # Very simple questions don't need sub-questions
+            print("  Very simple question (level 1) detected. No sub-questions needed.")
             return []
-        else:  # complex or any other response
-            num_sub_questions = "2-4"
-            print("  Complex question detected. Generating 2-4 sub-questions.")
+        elif complexity_level == 2:
+            # Simple questions get 2 sub-questions
+            num_sub_questions = "2"
+            print(f"  Moderate question (level 2) detected. Generating {num_sub_questions} sub-questions.")
+        elif complexity_level == 3:
+            # Simple questions get 2 sub-questions
+            num_sub_questions = "3"
+            print(f"  Moderate question (level 3) detected. Generating {num_sub_questions} sub-questions.")
+        elif complexity_level == 4:
+            # Moderate questions get 3 sub-questions
+            num_sub_questions = "4"
+            print(f"  Complex question (level 4) detected. Generating {num_sub_questions} sub-questions.")
+        else:
+            # Complex questions get 4 sub-questions
+            num_sub_questions = "5"
+            print(f"  Very complex question (level 5) detected. Generating {num_sub_questions} sub-questions.")
         
         # Now generate the appropriate number of sub-questions
         system_message = self.sub_question_system_message
@@ -577,18 +622,35 @@ Guidelines:
 
 Main question: {question}
 
-Break this question down into {num_sub_questions} highly focused, concise sub-questions that will help provide a comprehensive answer.
-Each sub-question should:
-1. Address a specific aspect of the main question
-2. Be more specific and narrower in scope than the main question
-3. Be directly answerable with a concise response
-4. Be clear and self-contained
-5. Avoid overlapping too much with other sub-questions
+Break this question down into {num_sub_questions} MUCH SIMPLER sub-questions. Each sub-question must be significantly less complex than the main question.
+
+REQUIREMENTS for each sub-question:
+1. MUST be significantly simpler than the original question
+2. Focus on a single, narrow aspect of the original question
+3. Use simpler vocabulary and more basic sentence structure
+4. Be answerable without requiring further breakdown
+5. Be more specific and concrete than the original question
+6. Avoid introducing new complexity or broadening the scope
+
+EXAMPLES:
+
+Original complex question: "What are the economic and environmental impacts of renewable energy adoption globally?"
+
+Good simpler sub-questions:
+- What are the main economic benefits of solar power?
+- How does wind energy affect local wildlife?
+- What are the upfront costs of installing renewable energy systems?
+
+Original complex question: "How has artificial intelligence influenced modern healthcare systems and patient outcomes?"
+
+Good simpler sub-questions:
+- What specific AI tools are used in medical diagnosis?
+- How do patients benefit from AI-assisted healthcare?
+- What challenges do hospitals face when implementing AI systems?
 
 IMPORTANT: 
 - Return ONLY the sub-questions, one per line
-- Make each sub-question as focused and specific as possible
-- Ensure sub-questions can be answered concisely
+- Each sub-question MUST be significantly less complex than the original
 - Do not include any other text, numbering, or explanations"""
 
         @retry_with_exponential_backoff(
@@ -616,9 +678,16 @@ IMPORTANT:
         response = extract_content(message)
         sub_questions = [q.strip() for q in response.split('\n') if q.strip() and not q.lower().startswith(("here are", "question", "-", "•", "*", "1.", "2.", "3."))]
         
-        # For complex questions, return up to 5 sub-questions
-        # For medium questions, return up to 3 sub-questions
-        max_questions = 5 if complexity == "complex" else 3
+        # Set maximum number of sub-questions based on complexity level
+        if complexity_level <= 2:
+            max_questions = 2
+        elif complexity_level == 3:
+            max_questions = 3
+        elif complexity_level == 4:
+            max_questions = 4
+        else:  # complexity_level >= 5
+            max_questions = 5
+            
         return sub_questions[:max_questions]
     
     def generate_answer_with_tree(self, question: str, client, brave_api_key: str, depth: int = 0) -> Dict[str, Any]:
