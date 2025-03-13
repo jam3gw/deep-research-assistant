@@ -20,8 +20,7 @@ TOP_K_RESULTS = 3  # Number of most relevant documents to retrieve
 
 # Model configuration
 DEFAULT_MODEL = "claude-3-5-sonnet-20240620"  # Using Sonnet for better quality
-DEFAULT_SYNTHESIS_MAX_TOKENS = 1500  # Increased from 1200 to accommodate sources
-DEFAULT_ANSWER_MAX_TOKENS = 1200  # Restored to original value for comprehensive final answer
+DEFAULT_ANSWER_MAX_TOKENS = 1800  # Restored to original value for comprehensive final answer
 DEFAULT_EVALUATION_MAX_TOKENS = 400  # Keep unchanged
 
 # RAG configuration
