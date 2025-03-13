@@ -68,47 +68,60 @@ def generate_tree_visualization(question_tree):
                 margin: 20px;
                 line-height: 1.5;
                 color: #333;
+                background-color: #f9f9f9;
             }
             .tree-container {
-                max-width: 1000px;
+                max-width: 1200px;
                 margin: 20px auto;
                 position: relative;
+                background-color: white;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+                padding: 20px;
             }
             .node {
                 margin: 10px 0;
-                border-radius: 4px;
+                border-radius: 6px;
                 overflow: hidden;
                 position: relative;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             }
             .question-node {
                 background-color: #f5f8ff;
-                border-left: 3px solid #4a6fa5;
+                border-left: 4px solid #4a6fa5;
             }
             /* Style nodes differently based on their logical depth */
             .question-node[data-depth="0"] {
-                border-left-color: #4a6fa5;
-                background-color: #f0f5ff;
+                border-left-color: #2c3e50;
+                background-color: #ecf0f1;
+                margin-bottom: 20px;
             }
             .question-node[data-depth="1"] {
-                border-left-color: #5c7cfa;
-                background-color: #f5f8ff;
+                border-left-color: #3498db;
+                background-color: #e8f4fc;
+                margin-left: 0; /* Ensure level 1 nodes are not indented */
+                margin-bottom: 15px;
             }
             .question-node[data-depth="2"] {
-                border-left-color: #748ffc;
-                background-color: #f8faff;
+                border-left-color: #9b59b6;
+                background-color: #f5eef8;
             }
             .answer-node {
                 background-color: #f5fff8;
-                border-left: 3px solid #4caf50;
-                margin-left: 20px;
-                padding: 10px;
+                border-left: 4px solid #4caf50;
+                padding: 15px;
                 display: none; /* Hidden by default */
+                margin-top: 5px;
             }
             .node-header {
-                padding: 10px 15px;
+                padding: 12px 15px;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
+                transition: background-color 0.2s;
+            }
+            .node-header:hover {
+                background-color: rgba(0,0,0,0.03);
             }
             .node-title {
                 font-weight: 500;
@@ -118,71 +131,92 @@ def generate_tree_visualization(question_tree):
                 color: #666;
                 font-size: 0.8em;
                 margin-right: 10px;
-                background-color: #eee;
-                padding: 2px 6px;
-                border-radius: 10px;
+                background-color: rgba(0,0,0,0.05);
+                padding: 3px 8px;
+                border-radius: 12px;
+                font-weight: 600;
             }
             /* Style depth indicators based on logical depth */
             .question-node[data-depth="0"] .depth-indicator {
-                background-color: #e7f0ff;
-                color: #4a6fa5;
+                background-color: #2c3e50;
+                color: white;
             }
             .question-node[data-depth="1"] .depth-indicator {
-                background-color: #edf2ff;
-                color: #5c7cfa;
+                background-color: #3498db;
+                color: white;
             }
             .question-node[data-depth="2"] .depth-indicator {
-                background-color: #f3f6ff;
-                color: #748ffc;
+                background-color: #9b59b6;
+                color: white;
             }
             .toggle-icon {
-                font-size: 16px;
-                width: 20px;
+                font-size: 18px;
+                width: 24px;
+                height: 24px;
                 text-align: center;
+                line-height: 24px;
+                background-color: rgba(0,0,0,0.05);
+                border-radius: 50%;
+                margin-left: 10px;
             }
             /* Base children container styling */
             .children {
                 position: relative;
                 display: none; /* Hidden by default */
-                border-left: 1px dashed #ccc;
+                padding-left: 30px; /* Increased padding for better visual hierarchy */
+                border-left: 1px dashed rgba(0,0,0,0.1);
+                margin-left: 10px;
             }
             /* Show children when expanded */
             .expanded > .children, 
             .expanded > .answer-node {
                 display: block;
             }
+            /* Visual indicator for the tree structure */
+            .children::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                height: 100%;
+                border-left: 1px dashed rgba(0,0,0,0.1);
+            }
             h1 {
-                color: #4a6fa5;
-                font-size: 1.5rem;
-                margin-bottom: 10px;
+                color: #2c3e50;
+                font-size: 1.8rem;
+                margin-bottom: 15px;
+                text-align: center;
             }
             p {
                 margin-top: 0;
                 color: #666;
+                text-align: center;
+                margin-bottom: 30px;
             }
             button {
-                background-color: #4a6fa5;
+                background-color: #3498db;
                 color: white;
                 border: none;
-                padding: 5px 10px;
+                padding: 8px 15px;
                 border-radius: 4px;
-                font-size: 0.8em;
+                font-size: 0.9em;
                 cursor: pointer;
                 margin: 5px 0;
+                transition: background-color 0.2s;
             }
             button:hover {
-                background-color: #3b5998;
+                background-color: #2980b9;
             }
             .sources {
                 margin-top: 15px;
                 padding-top: 10px;
                 border-top: 1px solid #eee;
-                font-size: 0.8em;
+                font-size: 0.9em;
             }
             .sources h4 {
                 margin: 0 0 5px 0;
                 color: #666;
-                font-size: 0.9em;
+                font-size: 1em;
             }
             .sources ul {
                 margin: 0;
@@ -190,11 +224,18 @@ def generate_tree_visualization(question_tree):
                 color: #777;
             }
             .sources a {
-                color: #4a6fa5;
+                color: #3498db;
                 text-decoration: none;
             }
             .sources a:hover {
                 text-decoration: underline;
+            }
+            /* Debug outline for development */
+            .debug-mode .node {
+                outline: 1px solid red;
+            }
+            .debug-mode .children {
+                outline: 1px solid blue;
             }
         </style>
     </head>
@@ -234,6 +275,14 @@ def generate_tree_visualization(question_tree):
                     rootNode.classList.add('expanded');
                     const icon = rootNode.querySelector('.toggle-icon');
                     if (icon) icon.textContent = '−';
+                    
+                    // Also expand all level 1 nodes by default for better initial view
+                    const level1Nodes = document.querySelectorAll('.question-node[data-depth="1"]');
+                    level1Nodes.forEach(node => {
+                        node.classList.add('expanded');
+                        const nodeIcon = node.querySelector('.toggle-icon');
+                        if (nodeIcon) nodeIcon.textContent = '−';
+                    });
                 }
             });
         </script>
@@ -256,12 +305,9 @@ def render_interactive_node_html(node, path="", parent_depth=None):
     depth = node['depth']
     node_id = node['id']
     
-    # Calculate indentation based on depth - simple and direct approach
-    indent_style = f"margin-left: {depth * 20}px;"
-    
-    # Create the node HTML with direct styling for indentation
+    # Create the node HTML with proper nesting structure
     html = f"""
-    <div class="node question-node" id="{node_id}" data-depth="{depth}" style="{indent_style}">
+    <div class="node question-node" id="{node_id}" data-depth="{depth}">
         <div class="node-header" onclick="toggleNode('{node_id}')">
             <span class="depth-indicator">Level {depth}</span>
             <span class="node-title">{node['question']}</span>
@@ -270,8 +316,8 @@ def render_interactive_node_html(node, path="", parent_depth=None):
     """
     
     if node.get('needs_breakdown', False) and node.get('children'):
-        # Add a small left margin to the children container for the connecting line
-        html += '<div class="children" style="margin-left: 10px;">'
+        # Add children container
+        html += '<div class="children">'
         
         # Process each child node
         for child in node['children']:

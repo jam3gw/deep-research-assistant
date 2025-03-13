@@ -14,7 +14,7 @@ import time
 from anthropic import Anthropic
 import openai
 from rag_engine import RAGEngine
-from tree_visualizer import generate_tree_visualization, validate_tree_structure
+from tree_visualizer import validate_tree_structure
 import logging
 
 # Set up logging
@@ -55,6 +55,35 @@ def print_tree_structure(node, indent=0):
         for child in node['children']:
             print_tree_structure(child, indent + 1)
 
+def count_nodes(tree):
+    """Count the total number of nodes in the tree."""
+    if not tree:
+        return 0
+    
+    count = 1  # Count the current node
+    
+    # Add count of all children
+    if 'children' in tree and tree['children']:
+        for child in tree['children']:
+            count += count_nodes(child)
+    
+    return count
+
+def get_max_depth(tree, current_depth=0):
+    """Get the maximum depth of the tree."""
+    if not tree:
+        return current_depth
+    
+    max_depth = current_depth
+    
+    # Check all children for their max depth
+    if 'children' in tree and tree['children']:
+        for child in tree['children']:
+            child_depth = get_max_depth(child, current_depth + 1)
+            max_depth = max(max_depth, child_depth)
+    
+    return max_depth
+
 def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Test the RAG-based research generator locally.')
@@ -81,6 +110,9 @@ def main():
         print("\nGenerating question tree and answers...")
         try:
             question_tree = rag.generate_answer_with_tree(args.question, client, brave_key)
+
+            print("Generated question tree structure:")
+            print(json.dumps(question_tree, indent=2, default=str))
             
             # Validate the tree structure
             is_valid, issues = validate_tree_structure(question_tree)
@@ -93,14 +125,6 @@ def main():
         except Exception as e:
             logger.error(f"Error generating question tree: {str(e)}")
             raise
-        
-        # Generate tree visualization
-        print("\nGenerating tree visualization...")
-        try:
-            tree_visualization = generate_tree_visualization(question_tree)
-        except Exception as e:
-            logger.error(f"Error generating tree visualization: {str(e)}")
-            tree_visualization = "Error generating visualization"
         
         # Get final answer
         print("\nGenerating final synthesized answer...")
@@ -117,6 +141,14 @@ def main():
             logger.error(f"Error generating final answer: {str(e)}")
             raise
         
+        # Calculate metadata
+        execution_time = time.time() - start_time
+        metadata = {
+            'total_nodes': count_nodes(question_tree),
+            'max_depth': get_max_depth(question_tree),
+            'processing_time': f"{execution_time:.2f} seconds"
+        }
+        
         # Print results
         print("\n=== Question Tree Structure ===")
         print_tree_structure(question_tree)
@@ -127,27 +159,28 @@ def main():
         print("\n=== Sources ===")
         for i, source in enumerate(sources, 1):
             print(f"{i}. {source.get('title', 'Untitled')} - {source.get('url', 'No URL')}")
+            
+        print("\n=== Metadata ===")
+        print(f"Total nodes: {metadata['total_nodes']}")
+        print(f"Maximum depth: {metadata['max_depth']}")
+        print(f"Processing time: {metadata['processing_time']}")
         
         # Save output
         output = {
             'explanation': final_answer,
-            'tree_visualization': tree_visualization,
             'question_tree': question_tree,
             'sources': sources,
-            'execution_time': time.time() - start_time
+            'metadata': metadata,
+            'execution_time': execution_time
         }
         
         os.makedirs('output', exist_ok=True)
         with open('output/last_run.json', 'w') as f:
             json.dump(output, f, indent=2)
-            
-        # Save tree visualization to a separate HTML file for easy viewing
-        with open('output/tree.html', 'w') as f:
-            f.write(tree_visualization)
         
-        print(f"\nExecution completed in {time.time() - start_time:.2f} seconds")
+        print(f"\nExecution completed in {execution_time:.2f} seconds")
         print("Results saved to output/last_run.json")
-        print("Tree visualization saved to output/tree.html")
+        print("Note: Tree visualization is now generated client-side")
         
     except Exception as e:
         print(f"\nError: {str(e)}")

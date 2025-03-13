@@ -8,7 +8,6 @@ from anthropic import Anthropic
 import openai
 from rag_engine import RAGEngine
 from utils import build_response
-from tree_visualizer import generate_tree_visualization
 
 def lambda_handler(event, context):
     # Check if this is a Lambda Function URL invocation
@@ -63,9 +62,10 @@ def lambda_handler(event, context):
             
             # Generate answer with question tree using dynamic knowledge base
             question_tree = rag.generate_answer_with_tree(query, client, brave_key)
-            
-            # Generate tree visualization
-            tree_visualization = generate_tree_visualization(question_tree)
+
+            # Log the question tree structure for debugging
+            print("Generated question tree structure:")
+            print(json.dumps(question_tree, indent=2, default=str))
             
             # Get the final answer from the tree structure
             if question_tree['needs_breakdown']:
@@ -75,11 +75,18 @@ def lambda_handler(event, context):
                 # If no breakdown, use the direct answer
                 final_answer = question_tree['answer']
             
-            # Return the response with tree structure
+            # Calculate metadata for the frontend
+            metadata = {
+                'total_nodes': count_nodes(question_tree),
+                'max_depth': get_max_depth(question_tree),
+                'processing_time': 'N/A'  # Could add actual processing time if needed
+            }
+            
+            # Return the response with tree structure but without HTML visualization
             return build_response(200, {
                 'explanation': final_answer,
-                'tree_visualization': tree_visualization,
                 'question_tree': question_tree,
+                'metadata': metadata,
                 'success': True,
                 'formatted': True
             }, not is_function_url)
@@ -93,3 +100,32 @@ def lambda_handler(event, context):
             
     except Exception as e:
         return build_response(500, {'error': f'Error retrieving API keys: {str(e)}'}, not is_function_url)
+
+def count_nodes(tree):
+    """Count the total number of nodes in the tree."""
+    if not tree:
+        return 0
+    
+    count = 1  # Count the current node
+    
+    # Add count of all children
+    if 'children' in tree and tree['children']:
+        for child in tree['children']:
+            count += count_nodes(child)
+    
+    return count
+
+def get_max_depth(tree, current_depth=0):
+    """Get the maximum depth of the tree."""
+    if not tree:
+        return current_depth
+    
+    max_depth = current_depth
+    
+    # Check all children for their max depth
+    if 'children' in tree and tree['children']:
+        for child in tree['children']:
+            child_depth = get_max_depth(child, current_depth + 1)
+            max_depth = max(max_depth, child_depth)
+    
+    return max_depth
