@@ -271,13 +271,69 @@ class RAGEngine:
             top_k
         )
         
+        # Enhanced logging for similarity scores
+        print(f"Retrieved {len(indices[0])} potential documents for query")
+        if len(indices[0]) > 0:
+            print(f"Similarity scores (lower is better): {distances[0]}")
+            print(f"Current similarity threshold: {SIMILARITY_THRESHOLD}")
+        
         # Filter by similarity threshold and return relevant documents
         results = []
         for dist, idx in zip(distances[0], indices[0]):
-            if dist < SIMILARITY_THRESHOLD:
-                results.append(self.documents[idx])
+            if idx < len(self.documents):  # Safety check
+                if dist < SIMILARITY_THRESHOLD:
+                    results.append(self.documents[idx])
+                    print(f"Including document with score {dist:.4f}: {self.documents[idx].get('metadata', {}).get('title', 'Untitled')[:50]}...")
+                else:
+                    print(f"Excluding document with score {dist:.4f} (above threshold): {self.documents[idx].get('metadata', {}).get('title', 'Untitled')[:50]}...")
+            else:
+                print(f"Warning: Index {idx} out of bounds for documents array of length {len(self.documents)}")
         
+        print(f"Final result: {len(results)} documents passed the similarity threshold")
         return results
+    
+    def retrieve_with_fallback(self, query: str, depth: int) -> List[Dict[str, Any]]:
+        """Retrieve documents with fallback mechanism if no results are found."""
+        print(f"  Retrieving relevant documents for question at depth {depth}...")
+        relevant_docs = self.retrieve(query)
+        print(f"  Retrieved {len(relevant_docs)} relevant documents.")
+        
+        # First fallback: If no sources found, try with a higher threshold
+        if len(relevant_docs) == 0:
+            print(f"  No sources found with standard threshold. Trying first fallback retrieval...")
+            # Temporarily increase the threshold by 100% (double) for this query only
+            fallback_threshold = SIMILARITY_THRESHOLD * 2.0
+            print(f"  Using fallback threshold: {fallback_threshold:.4f}")
+            
+            # Search in FAISS with the same query embedding but higher threshold
+            query_embedding = self.get_embeddings([query])[0]
+            distances, indices = self.index.search(
+                query_embedding.reshape(1, -1),
+                TOP_K_RESULTS
+            )
+            
+            # Filter with higher threshold
+            for dist, idx in zip(distances[0], indices[0]):
+                if idx < len(self.documents) and dist < fallback_threshold:
+                    relevant_docs.append(self.documents[idx])
+                    print(f"  Fallback 1: Including document with score {dist:.4f}")
+            
+            print(f"  First fallback retrieval found {len(relevant_docs)} documents")
+            
+            # Second fallback: If still no sources found, just take the top 2 closest documents
+            if len(relevant_docs) == 0 and len(indices[0]) > 0:
+                print(f"  Still no sources found. Using second fallback: taking top 2 closest documents regardless of threshold.")
+                # Take at most 2 documents to avoid too much irrelevant content
+                for i in range(min(2, len(indices[0]))):
+                    idx = indices[0][i]
+                    dist = distances[0][i]
+                    if idx < len(self.documents):
+                        relevant_docs.append(self.documents[idx])
+                        print(f"  Fallback 2: Including document with score {dist:.4f} (above threshold but closest available)")
+                
+                print(f"  Second fallback retrieval found {len(relevant_docs)} documents")
+        
+        return relevant_docs
     
     def _chunk_text(self, text: str) -> List[str]:
         """Split text into overlapping chunks."""
@@ -390,10 +446,7 @@ IMPORTANT:
                 
                 try:
                     # First retrieve relevant documents to get sources
-                    # This ensures we have sources even if they get cut off in the answer
-                    print(f"  Retrieving relevant documents for question at depth {depth}...")
-                    relevant_docs = self.retrieve(question)
-                    print(f"  Retrieved {len(relevant_docs)} relevant documents.")
+                    relevant_docs = self.retrieve_with_fallback(question, depth)
                     
                     sources = []
                     for doc in relevant_docs:
@@ -404,6 +457,14 @@ IMPORTANT:
                                 'url': source_url,
                                 'title': source_title
                             })
+                    
+                    # If no sources found, add a placeholder source
+                    if not sources:
+                        print(f"  WARNING: No sources found for node at depth {depth}. Adding a placeholder source.")
+                        sources.append({
+                            'url': "https://example.com/no-sources-found",
+                            'title': "No specific sources found for this question"
+                        })
                     
                     # Deduplicate sources
                     sources = deduplicate_sources(sources)
@@ -441,26 +502,8 @@ IMPORTANT:
                 node['sub_questions_error'] = str(e)
                 
                 try:
-                    # Generate answer directly
-                    answer = self.generate_answer(question, client, brave_api_key, depth, concise=False)
-                    node['answer'] = answer
-                except Exception as e2:
-                    print(f"ERROR generating fallback answer at depth {depth}: {str(e2)}")
-                    node['answer_error'] = str(e2)
-                    node['answer'] = f"Error generating answer: {str(e2)}"
-                
-                return node
-            
-            if len(sub_questions) <= 1:
-                # If no meaningful breakdown, treat as leaf node
-                print(f"  Insufficient sub-questions ({len(sub_questions)}). Treating as leaf node.")
-                node['needs_breakdown'] = False
-                
-                try:
                     # First retrieve relevant documents to get sources
-                    print(f"  Retrieving relevant documents for question at depth {depth}...")
-                    relevant_docs = self.retrieve(question)
-                    print(f"  Retrieved {len(relevant_docs)} relevant documents.")
+                    relevant_docs = self.retrieve_with_fallback(question, depth)
                     
                     sources = []
                     for doc in relevant_docs:
@@ -471,6 +514,64 @@ IMPORTANT:
                                 'url': source_url,
                                 'title': source_title
                             })
+                    
+                    # If no sources found, add a placeholder source
+                    if not sources:
+                        print(f"  WARNING: No sources found for node at depth {depth}. Adding a placeholder source.")
+                        sources.append({
+                            'url': "https://example.com/no-sources-found",
+                            'title': "No specific sources found for this question"
+                        })
+                    
+                    # Deduplicate sources
+                    sources = deduplicate_sources(sources)
+                    print(f"  Found {len(sources)} unique sources for node at depth {depth}")
+                    
+                    # Add sources to the node
+                    node['sources'] = sources
+                except Exception as e:
+                    print(f"ERROR retrieving sources at depth {depth}: {str(e)}")
+                    node['sources_error'] = str(e)
+                
+                try:
+                    # Generate answer with sources - use concise mode for leaf nodes
+                    print(f"  Generating answer for node with insufficient sub-questions at depth {depth}...")
+                    answer = self.generate_answer(question, client, brave_api_key, depth, concise=True)
+                    print(f"  Generated answer of length {len(answer)} characters.")
+                    node['answer'] = answer
+                except Exception as e:
+                    print(f"ERROR generating answer at depth {depth}: {str(e)}")
+                    node['answer_error'] = str(e)
+                    node['answer'] = f"Error generating answer: {str(e)}"
+                
+                return node
+            
+            if len(sub_questions) <= 1:
+                # If no meaningful breakdown, treat as leaf node
+                print(f"  Insufficient sub-questions ({len(sub_questions)}). Treating as leaf node.")
+                node['needs_breakdown'] = False
+                
+                try:
+                    # First retrieve relevant documents to get sources
+                    relevant_docs = self.retrieve_with_fallback(question, depth)
+                    
+                    sources = []
+                    for doc in relevant_docs:
+                        if 'metadata' in doc and 'source' in doc['metadata']:
+                            source_url = doc['metadata']['source']
+                            source_title = doc['metadata'].get('title', 'Untitled Source')
+                            sources.append({
+                                'url': source_url,
+                                'title': source_title
+                            })
+                    
+                    # If no sources found, add a placeholder source
+                    if not sources:
+                        print(f"  WARNING: No sources found for node at depth {depth}. Adding a placeholder source.")
+                        sources.append({
+                            'url': "https://example.com/no-sources-found",
+                            'title': "No specific sources found for this question"
+                        })
                     
                     # Deduplicate sources
                     sources = deduplicate_sources(sources)
@@ -587,11 +688,11 @@ IMPORTANT:
         try:
             # First, try to retrieve relevant documents from the existing knowledge base
             print(f"  Retrieving documents from existing knowledge base...")
-            relevant_docs = self.retrieve(query)
+            relevant_docs = self.retrieve_with_fallback(query, depth)
             print(f"  Retrieved {len(relevant_docs)} documents from existing knowledge base.")
             
             # If not enough relevant documents, populate knowledge base with web search results
-            if len(relevant_docs) < 2:
+            if len(relevant_docs) < 1:
                 print(f"  Insufficient documents ({len(relevant_docs)}). Performing web search...")
                 try:
                     # Initialize knowledge base manager
@@ -602,7 +703,7 @@ IMPORTANT:
                     print(f"  Added {len(search_docs)} documents from web search.")
                     
                     # Retrieve again with the updated knowledge base
-                    relevant_docs = self.retrieve(query)
+                    relevant_docs = self.retrieve_with_fallback(query, depth)
                     print(f"  Retrieved {len(relevant_docs)} documents after knowledge base update.")
                 except Exception as e:
                     print(f"ERROR during web search: {str(e)}")
@@ -635,6 +736,15 @@ IMPORTANT:
                             })
                 except Exception as e:
                     print(f"ERROR processing document {i}: {str(e)}")
+            
+            # If we still have no sources, create a placeholder source
+            if not sources:
+                print("  WARNING: No sources found. Adding a placeholder source.")
+                sources.append({
+                    'number': 1,
+                    'url': "https://example.com/no-sources-found",
+                    'title': "No specific sources found for this query"
+                })
             
             print(f"  Prepared context with {len(sources)} sources and {len(context)} characters.")
             
