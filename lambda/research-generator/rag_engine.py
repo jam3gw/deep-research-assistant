@@ -127,6 +127,83 @@ class RAGEngine:
         self.kb_manager = KnowledgeBaseManager(self)
         # Initialize without API key - it will be set later
         self.openai_client = None
+        # Define HTML formatting templates
+        self._init_formatting_templates()
+    
+    def _init_formatting_templates(self):
+        """Initialize HTML formatting templates for different response types."""
+        # Comprehensive format for complex questions
+        self.comprehensive_format = """Format your response with semantic HTML tags for optimal readability and structure:
+
+1. Document Structure:
+- Use <h1> for the main title/topic
+- Use <h2> for major sections
+- Use <h3> for subsections when needed
+
+2. Content Sections:
+- Wrap each major section in <div class="section technology"> or <div class="section limitation"> based on content type
+- Use <p> for regular paragraphs
+- Use <strong> for emphasizing important terms or concepts
+- Use <ul> and <li> for lists
+- Use <blockquote> for notable quotes or definitions
+
+3. Formatting Guidelines:
+- Be comprehensive but clear
+- Use bullet points for lists of features, benefits, or steps
+- Break down complex topics into digestible sections
+- Use examples to illustrate concepts when helpful
+- DO NOT use numbered citations like [1], [2], etc. in your response
+
+Example structure:
+<h1>Comprehensive Topic Overview</h1>
+<p>Thorough introduction with <strong>key terms</strong> highlighted.</p>
+
+<div class="section technology">
+    <h2>Major Section</h2>
+    <p>Detailed explanation.</p>
+    
+    <h3>Subsection</h3>
+    <ul>
+        <li>Detailed point 1</li>
+        <li>Detailed point 2</li>
+    </ul>
+</div>"""
+
+        # Simple format for direct answers
+        self.simple_format = """Format your response with semantic HTML tags for optimal readability and structure:
+
+1. Document Structure:
+- Use <h1> for the main title/topic
+- Use <p> for regular paragraphs
+- Use <strong> for emphasizing important terms or concepts
+- Use <ul> and <li> for lists when appropriate
+
+2. Formatting Guidelines:
+- Be direct and to the point
+- Provide a complete answer without unnecessary elaboration
+- Use clear, simple language
+- Include the most important information first
+
+Example structure:
+<h1>Direct Answer to Question</h1>
+<p>Clear explanation with <strong>key terms</strong> highlighted.</p>
+<p>Additional relevant information if needed.</p>"""
+
+        # Complexity assessment system message
+        self.system_message_complexity = """You are an AI assistant that analyzes questions to determine their complexity.
+Your task is to categorize questions as 'simple', 'medium', or 'complex' based on:
+1. The number of distinct concepts or topics involved
+2. The depth of knowledge required to answer comprehensively
+3. Whether the question has multiple facets or dimensions
+4. The scope of the question (narrow vs. broad)
+5. The level of specificity vs. generality
+
+Respond with ONLY ONE of these three words: 'simple', 'medium', or 'complex'."""
+
+        # Sub-question generator system message
+        self.sub_question_system_message = """You are a research assistant tasked with breaking down complex questions into focused, concise sub-questions.
+Your responses should contain ONLY the sub-questions, one per line, with no additional text, prefixes, or explanations.
+Each sub-question should be specific, focused, and directly answerable."""
     
     def set_openai_key(self, api_key: str):
         """Set the OpenAI API key and initialize the client."""
@@ -411,19 +488,11 @@ class RAGEngine:
         context = "\n\n".join([doc['content'] for doc in relevant_docs])
         
         # First, assess the complexity of the question
-        system_message_complexity = """You are an AI assistant that analyzes questions to determine their complexity.
-Your task is to categorize questions as 'simple', 'medium', or 'complex' based on:
-1. The number of distinct concepts or topics involved
-2. The depth of knowledge required to answer comprehensively
-3. Whether the question has multiple facets or dimensions
-4. The scope of the question (narrow vs. broad)
-5. The level of specificity vs. generality
-
-Respond with ONLY ONE of these three words: 'simple', 'medium', or 'complex'."""
+        system_message_complexity = self.system_message_complexity
         
         complexity_prompt = f"""Question: {question}
 
-Analyze this question and determine if it is 'simple', 'medium', or 'complex'.
+Analyze this question and determine if it is 'simple' or 'complex'.
 
 A 'simple' question:
 - Focuses on a single, well-defined concept
@@ -431,20 +500,14 @@ A 'simple' question:
 - Doesn't require breaking down into sub-questions
 - Example: "What is the capital of France?"
 
-A 'medium' question:
-- Involves 2-3 related concepts
-- Benefits from some structured breakdown
-- Requires moderate explanation
-- Example: "How does climate change affect agriculture?"
-
 A 'complex' question:
 - Involves multiple interconnected concepts
 - Has several distinct facets or dimensions
 - Requires comprehensive explanation
-- Benefits from being broken into 3-5 sub-questions
+- Benefits from being broken into 2-4 sub-questions
 - Example: "What are the economic, social, and environmental impacts of artificial intelligence on global development, and how might these change over the next decade?"
 
-Respond with ONLY ONE of these three words: 'simple', 'medium', or 'complex'."""
+Respond with ONLY ONE of these two words: 'simple' or 'complex'."""
 
         # Get complexity assessment
         try:
@@ -474,42 +537,8 @@ Respond with ONLY ONE of these three words: 'simple', 'medium', or 'complex'."""
         except Exception as e:
             print(f"ERROR during complexity assessment: {str(e)}. Using standard comprehensive prompt.")
             # Fall back to standard comprehensive prompt
-            system_message_complexity = """You are a helpful research assistant that provides comprehensive, well-structured answers based on provided context.
-Format your response with semantic HTML tags for optimal readability and structure:
-
-1. Document Structure:
-- Use <h1> for the main title/topic
-- Use <h2> for major sections
-- Use <h3> for subsections when needed
-
-2. Content Sections:
-- Wrap each major section in <div class="section technology"> or <div class="section limitation"> based on content type
-- Use <p> for regular paragraphs
-- Use <strong> for emphasizing important terms or concepts
-- Use <ul> and <li> for lists
-- Use <blockquote> for notable quotes or definitions
-
-3. Formatting Guidelines:
-- Be comprehensive but clear
-- Use bullet points for lists of features, benefits, or steps
-- Break down complex topics into digestible sections
-- Use examples to illustrate concepts when helpful
-- DO NOT use numbered citations like [1], [2], etc. in your response
-
-Example structure:
-<h1>Comprehensive Topic Overview</h1>
-<p>Thorough introduction with <strong>key terms</strong> highlighted.</p>
-
-<div class="section technology">
-    <h2>Major Section</h2>
-    <p>Detailed explanation.</p>
-    
-    <h3>Subsection</h3>
-    <ul>
-        <li>Detailed point 1</li>
-        <li>Detailed point 2</li>
-    </ul>
-</div>"""
+            system_message_complexity = f"""You are a helpful research assistant that provides comprehensive, well-structured answers based on provided context.
+{self.comprehensive_format}"""
 
             complexity_prompt = f"""Context:
 {context}
@@ -521,8 +550,7 @@ Please provide a comprehensive answer to this question based on the provided con
 Guidelines:
 1. Be thorough and well-structured
 2. Use appropriate HTML formatting for readability
-3. DO NOT include a sources section at the end - this will be handled separately
-4. DO NOT use numbered citations like [1], [2], etc. in your response"""
+"""
 
         # Determine number of sub-questions based on complexity
         if complexity == "simple":
@@ -530,17 +558,12 @@ Guidelines:
             # Return an empty list to indicate no breakdown needed
             print("  Simple question detected. No sub-questions needed.")
             return []
-        elif complexity == "medium":
-            num_sub_questions = "2-3"
-            print("  Medium complexity question. Generating 2-3 sub-questions.")
         else:  # complex or any other response
-            num_sub_questions = "3-5"
-            print("  Complex question detected. Generating 3-5 sub-questions.")
+            num_sub_questions = "2-4"
+            print("  Complex question detected. Generating 2-4 sub-questions.")
         
         # Now generate the appropriate number of sub-questions
-        system_message = """You are a research assistant tasked with breaking down complex questions into focused, concise sub-questions.
-Your responses should contain ONLY the sub-questions, one per line, with no additional text, prefixes, or explanations.
-Each sub-question should be specific, focused, and directly answerable."""
+        system_message = self.sub_question_system_message
         
         prompt = f"""Context from knowledge base:
 {context}
@@ -972,19 +995,11 @@ IMPORTANT:
             # For simple questions at root level, we want a direct but comprehensive answer
             if depth == 0 and not concise:
                 # Assess if this is a simple question
-                system_message_complexity = """You are an AI assistant that analyzes questions to determine their complexity.
-Your task is to categorize questions as 'simple', 'medium', or 'complex' based on:
-1. The number of distinct concepts or topics involved
-2. The depth of knowledge required to answer comprehensively
-3. Whether the question has multiple facets or dimensions
-4. The scope of the question (narrow vs. broad)
-5. The level of specificity vs. generality
-
-Respond with ONLY ONE of these three words: 'simple', 'medium', or 'complex'."""
+                system_message_complexity = self.system_message_complexity
                 
                 complexity_prompt = f"""Question: {query}
 
-Analyze this question and determine if it is 'simple', 'medium', or 'complex'.
+Analyze this question and determine if it is 'simple' or 'complex'.
 
 A 'simple' question:
 - Focuses on a single, well-defined concept
@@ -992,20 +1007,14 @@ A 'simple' question:
 - Doesn't require breaking down into sub-questions
 - Example: "What is the capital of France?"
 
-A 'medium' question:
-- Involves 2-3 related concepts
-- Benefits from some structured breakdown
-- Requires moderate explanation
-- Example: "How does climate change affect agriculture?"
-
 A 'complex' question:
 - Involves multiple interconnected concepts
 - Has several distinct facets or dimensions
 - Requires comprehensive explanation
-- Benefits from being broken into 3-5 sub-questions
+- Benefits from being broken into 2-4 sub-questions
 - Example: "What are the economic, social, and environmental impacts of artificial intelligence on global development, and how might these change over the next decade?"
 
-Respond with ONLY ONE of these three words: 'simple', 'medium', or 'complex'."""
+Respond with ONLY ONE of these two words: 'simple' or 'complex'."""
 
                 # Get complexity assessment
                 try:
@@ -1036,26 +1045,8 @@ Respond with ONLY ONE of these three words: 'simple', 'medium', or 'complex'."""
                     # For simple questions, use a more direct approach
                     if complexity == "simple":
                         print("  Using direct answer approach for simple question.")
-                        system_message = """You are a helpful research assistant that provides clear, direct answers to simple questions.
-Format your response with semantic HTML tags for optimal readability and structure:
-
-1. Document Structure:
-- Use <h1> for the main title/topic
-- Use <p> for regular paragraphs
-- Use <strong> for emphasizing important terms or concepts
-- Use <ul> and <li> for lists when appropriate
-
-2. Formatting Guidelines:
-- Be direct and to the point
-- Provide a complete answer without unnecessary elaboration
-- Use clear, simple language
-- Include the most important information first
-
-Example structure:
-<h1>Direct Answer to Question</h1>
-<p>Clear explanation with <strong>key terms</strong> highlighted.</p>
-<p>Additional relevant information if needed.</p>"""
-
+                        system_message = f"""You are a helpful research assistant that provides clear, direct answers to simple questions.
+{self.simple_format}"""
                         prompt = f"""Context:
 {context}
 
@@ -1066,48 +1057,11 @@ Please provide a direct, clear answer to this simple question based on the provi
 Guidelines:
 1. Be direct and to the point
 2. Provide a complete answer
-3. Use appropriate HTML formatting for readability
-4. DO NOT include a sources section at the end - this will be handled separately
-5. DO NOT use numbered citations like [1], [2], etc. in your response"""
+3. Use appropriate HTML formatting for readability"""
                     else:
                         # Use standard comprehensive prompt for non-simple questions
-                        system_message = """You are a helpful research assistant that provides comprehensive, well-structured answers based on provided context.
-Format your response with semantic HTML tags for optimal readability and structure:
-
-1. Document Structure:
-- Use <h1> for the main title/topic
-- Use <h2> for major sections
-- Use <h3> for subsections when needed
-
-2. Content Sections:
-- Wrap each major section in <div class="section technology"> or <div class="section limitation"> based on content type
-- Use <p> for regular paragraphs
-- Use <strong> for emphasizing important terms or concepts
-- Use <ul> and <li> for lists
-- Use <blockquote> for notable quotes or definitions
-
-3. Formatting Guidelines:
-- Be comprehensive but clear
-- Use bullet points for lists of features, benefits, or steps
-- Break down complex topics into digestible sections
-- Use examples to illustrate concepts when helpful
-- DO NOT use numbered citations like [1], [2], etc. in your response
-
-Example structure:
-<h1>Comprehensive Topic Overview</h1>
-<p>Thorough introduction with <strong>key terms</strong> highlighted.</p>
-
-<div class="section technology">
-    <h2>Major Section</h2>
-    <p>Detailed explanation.</p>
-    
-    <h3>Subsection</h3>
-    <ul>
-        <li>Detailed point 1</li>
-        <li>Detailed point 2</li>
-    </ul>
-</div>"""
-
+                        system_message = f"""You are a helpful research assistant that provides comprehensive, well-structured answers based on provided context.
+{self.comprehensive_format}"""
                         prompt = f"""Context:
 {context}
 
@@ -1117,49 +1071,12 @@ Please provide a comprehensive answer to this question based on the provided con
 
 Guidelines:
 1. Be thorough and well-structured
-2. Use appropriate HTML formatting for readability
-3. DO NOT include a sources section at the end - this will be handled separately
-4. DO NOT use numbered citations like [1], [2], etc. in your response"""
+2. Use appropriate HTML formatting for readability"""
                 except Exception as e:
                     print(f"ERROR during complexity assessment: {str(e)}. Using standard comprehensive prompt.")
                     # Fall back to standard comprehensive prompt
-                    system_message = """You are a helpful research assistant that provides comprehensive, well-structured answers based on provided context.
-Format your response with semantic HTML tags for optimal readability and structure:
-
-1. Document Structure:
-- Use <h1> for the main title/topic
-- Use <h2> for major sections
-- Use <h3> for subsections when needed
-
-2. Content Sections:
-- Wrap each major section in <div class="section technology"> or <div class="section limitation"> based on content type
-- Use <p> for regular paragraphs
-- Use <strong> for emphasizing important terms or concepts
-- Use <ul> and <li> for lists
-- Use <blockquote> for notable quotes or definitions
-
-3. Formatting Guidelines:
-- Be comprehensive but clear
-- Use bullet points for lists of features, benefits, or steps
-- Break down complex topics into digestible sections
-- Use examples to illustrate concepts when helpful
-- DO NOT use numbered citations like [1], [2], etc. in your response
-
-Example structure:
-<h1>Comprehensive Topic Overview</h1>
-<p>Thorough introduction with <strong>key terms</strong> highlighted.</p>
-
-<div class="section technology">
-    <h2>Major Section</h2>
-    <p>Detailed explanation.</p>
-    
-    <h3>Subsection</h3>
-    <ul>
-        <li>Detailed point 1</li>
-        <li>Detailed point 2</li>
-    </ul>
-</div>"""
-
+                    system_message = f"""You are a helpful research assistant that provides comprehensive, well-structured answers based on provided context.
+{self.comprehensive_format}"""
                     prompt = f"""Context:
 {context}
 
@@ -1169,47 +1086,12 @@ Please provide a comprehensive answer to this question based on the provided con
 
 Guidelines:
 1. Be thorough and well-structured
-2. Use appropriate HTML formatting for readability
-3. DO NOT include a sources section at the end - this will be handled separately
-4. DO NOT use numbered citations like [1], [2], etc. in your response"""
+2. Use appropriate HTML formatting for readability"""
             # Determine which prompt to use based on depth and conciseness for non-root questions
             elif concise or depth >= 1:
                 # Use a more concise prompt for leaf nodes
-                system_message = """You are a helpful research assistant that provides concise, focused answers based on provided context.
-Format your response with semantic HTML tags for optimal readability and structure:
-
-1. Document Structure:
-- Use <h1> for the main title/topic (keep it brief)
-- Use <h2> for major sections (only if necessary)
-- Avoid using <h3> unless absolutely necessary
-
-2. Content Sections:
-- Wrap each major section in <div class="section technology"> or <div class="section limitation"> based on content type
-- Use <p> for regular paragraphs (keep paragraphs short and focused)
-- Use <strong> only for emphasizing specific terms or phrases
-- Use <ul> and <li> for lists (prefer lists over long paragraphs)
-
-3. Formatting Guidelines:
-- Be extremely concise and focused
-- Prioritize brevity over comprehensiveness
-- Use bullet points whenever possible
-- Limit to 1-2 short paragraphs per section
-- Avoid repetition and unnecessary details
-- Focus on making your answer as concise and informative as possible
-- DO NOT use numbered citations like [1], [2], etc. in your response
-
-Example structure:
-<h1>Main Topic</h1>
-<p>Brief introduction with <strong>key term</strong> highlighted.</p>
-
-<div class="section technology">
-    <h2>Key Points</h2>
-    <ul>
-        <li>Concise point 1</li>
-        <li>Concise point 2</li>
-    </ul>
-</div>"""
-
+                system_message = f"""You are a helpful research assistant that provides concise, focused answers to specific questions.
+{self.simple_format}"""
                 prompt = f"""Context:
 {context}
 
@@ -1220,48 +1102,11 @@ Please provide a VERY CONCISE answer to this specific question. Focus only on th
 Guidelines:
 1. Keep your answer brief and to the point
 2. Use bullet points and short paragraphs
-3. Include only the most essential information
-4. DO NOT include a sources section at the end - this will be handled separately
-5. DO NOT use numbered citations like [1], [2], etc. in your response"""
+3. Include only the most essential information"""
             else:
                 # Use a more comprehensive prompt for root node
-                system_message = """You are a helpful research assistant that provides comprehensive, well-structured answers based on provided context.
-Format your response with semantic HTML tags for optimal readability and structure:
-
-1. Document Structure:
-- Use <h1> for the main title/topic
-- Use <h2> for major sections
-- Use <h3> for subsections when needed
-
-2. Content Sections:
-- Wrap each major section in <div class="section technology"> or <div class="section limitation"> based on content type
-- Use <p> for regular paragraphs
-- Use <strong> for emphasizing important terms or concepts
-- Use <ul> and <li> for lists
-- Use <blockquote> for notable quotes or definitions
-
-3. Formatting Guidelines:
-- Be comprehensive but clear
-- Use bullet points for lists of features, benefits, or steps
-- Break down complex topics into digestible sections
-- Use examples to illustrate concepts when helpful
-- DO NOT use numbered citations like [1], [2], etc. in your response
-
-Example structure:
-<h1>Comprehensive Topic Overview</h1>
-<p>Thorough introduction with <strong>key terms</strong> highlighted.</p>
-
-<div class="section technology">
-    <h2>Major Section</h2>
-    <p>Detailed explanation.</p>
-    
-    <h3>Subsection</h3>
-    <ul>
-        <li>Detailed point 1</li>
-        <li>Detailed point 2</li>
-    </ul>
-</div>"""
-
+                system_message = f"""You are a helpful research assistant that provides comprehensive, well-structured answers based on provided context.
+{self.comprehensive_format}"""
                 prompt = f"""Context:
 {context}
 
@@ -1271,8 +1116,7 @@ Please provide a comprehensive answer to this question based on the provided con
 
 Guidelines:
 1. Be thorough and well-structured
-2. Use appropriate HTML formatting for readability
-3. DO NOT include a sources section at the end - this will be handled separately"""
+2. Use appropriate HTML formatting for readability"""
             
             print(f"  Sending request to Anthropic Claude with prompt length {len(prompt)} characters...")
             
