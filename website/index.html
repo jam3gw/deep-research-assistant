@@ -6,7 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Deep Research Assistant</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/tree-visualizer.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- D3.js for tree visualization -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         /* Temporarily disable share functionality */
         .share-container {
@@ -210,7 +213,8 @@
             margin: 10px 0;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
             transition: box-shadow 0.2s;
-            max-width: 600px;
+            width: calc(50% - 10px);
+            min-width: 300px;
         }
 
         #tree-visualization .node:hover {
@@ -220,6 +224,11 @@
         #tree-visualization .children {
             margin-left: 40px;
             position: relative;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding-top: 10px;
         }
 
         #tree-visualization .children::before {
@@ -230,6 +239,12 @@
             bottom: 0;
             width: 2px;
             background: #e0e0e0;
+        }
+
+        #tree-visualization .same-level-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
         #tree-visualization .node-question {
@@ -417,45 +432,16 @@
             }
 
             #tree-visualization .node {
-                margin: 10px 0;
-                padding: 12px;
-                font-size: 14px;
-                word-wrap: break-word;
-                max-width: 280px;
-            }
-
-            #tree-visualization .node-container {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-start;
-                margin: 10px 0;
+                width: 100%;
+                min-width: auto;
             }
 
             #tree-visualization .children {
-                margin-left: 20px;
-                border-left: 2px solid #e0e0e0;
-                padding-left: 15px;
-            }
-
-            #tree-visualization .node-content {
-                background: #ffffff;
-                border: 1px solid #e0e0e0;
-                border-radius: 8px;
-                padding: 12px;
-                margin: 5px 0;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                width: 100%;
-                box-sizing: border-box;
-            }
-
-            #tree-visualization .node-question {
-                font-weight: 600;
-                color: #2c3e50;
-                margin-bottom: 8px;
+                flex-direction: column;
+                gap: 10px;
             }
 
             #tree-visualization .node-answer {
-                color: #5c6c7c;
                 font-size: 13px;
                 line-height: 1.4;
             }
@@ -1266,13 +1252,15 @@
         </main>
 
         <footer>
-            <p>&copy; 2025 Deep Research Assistant. All rights reserved.</p>
-            <p id="environment-tag"></p>
+            <p>&copy; 2023 Deep Research Assistant. All rights reserved.</p>
+            <p id="environment-tag">Production Environment</p>
         </footer>
     </div>
 
     <script src="js/aws-config.js"></script>
+    <script src="js/tree-visualizer.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/test-tree.js"></script>
     <script>
         // Add functionality for example question buttons
         document.addEventListener('DOMContentLoaded', function () {

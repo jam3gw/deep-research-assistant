@@ -205,23 +205,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         // Display the tree visualization if available
-        if (data.tree_visualization) {
-            treeVisualization.innerHTML = data.tree_visualization;
-            treeVisualization.classList.remove('hidden');
-            console.log('Set tree visualization from data.tree_visualization');
-            // Initialize the tree after adding it to the DOM
-            setTimeout(initializeTree, 0);
-        } else if (data.question_tree) {
-            // If we only have the question tree but not the visualization,
-            // generate the visualization from the tree
+        if (data.question_tree) {
+            // Generate the visualization from the question tree
             console.log('Generating tree visualization from question_tree');
-            const visualization = generateTreeVisualization(data.question_tree);
-            treeVisualization.innerHTML = visualization;
+            renderClientSideTree(data.question_tree, data.metadata);
             treeVisualization.classList.remove('hidden');
-            // Initialize the tree after adding it to the DOM
-            setTimeout(initializeTree, 0);
         } else {
-            console.warn('No tree visualization or question tree found in data');
+            console.warn('No question tree found in data');
             treeVisualization.classList.add('hidden');
         }
 
@@ -348,151 +338,66 @@ document.addEventListener('DOMContentLoaded', function () {
         environmentTag.style.color = '#27ae60';
     }
 
-    // Function to generate tree visualization from a question tree
-    function generateTreeVisualization(questionTree) {
-        // This is a simplified version of the server-side tree visualization
-        // It generates HTML for the tree structure
+    // Function to render the client-side tree visualization
+    function renderClientSideTree(questionTree, metadata) {
+        console.log('renderClientSideTree called with:', { questionTree, metadata });
 
-        // Start with the HTML template
-        let html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Research Question Tree</title>
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    margin: 20px;
-                    line-height: 1.6;
-                }
-                .tree-container {
-                    margin: 20px 0;
-                }
-                .node {
-                    margin: 10px 0;
-                    border-radius: 5px;
-                    overflow: hidden;
-                }
-                .question-node {
-                    background-color: #e6f7ff;
-                    border-left: 4px solid #1890ff;
-                }
-                .max-depth-node {
-                    background-color: #fff7e6;
-                    border-left: 4px solid #fa8c16;
-                }
-                .broad-topic-node {
-                    background-color: #f9f0ff;
-                    border-left: 4px solid #722ed1;
-                }
-                .answer-node {
-                    background-color: #f6ffed;
-                    border-left: 4px solid #52c41a;
-                    margin-left: 20px;
-                    padding: 10px;
-                    display: none; /* Hidden by default */
-                }
-                .node-header {
-                    padding: 10px;
-                    cursor: pointer;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-                .node-title {
-                    font-weight: bold;
-                    flex-grow: 1;
-                }
-                .depth-indicator {
-                    color: #888;
-                    font-size: 0.8em;
-                    margin-right: 10px;
-                    background-color: #f0f0f0;
-                    padding: 2px 6px;
-                    border-radius: 10px;
-                    display: inline-block;
-                }
-                .toggle-icon {
-                    font-size: 18px;
-                    width: 20px;
-                    text-align: center;
-                }
-                .children {
-                    margin-left: 30px;
-                    border-left: 1px dashed #d9d9d9;
-                    padding-left: 20px;
-                    display: none; /* Hidden by default */
-                }
-                .expanded > .children, 
-                .expanded > .answer-node {
-                    display: block; /* Show when expanded */
-                }
-                .node-content {
-                    padding: 0 10px 10px 10px;
-                }
-                .max-depth-badge {
-                    display: inline-block;
-                    background-color: #fa8c16;
-                    color: white;
-                    font-size: 0.8em;
-                    padding: 2px 8px;
-                    border-radius: 10px;
-                    margin-left: 10px;
-                }
-                .broad-topic-badge {
-                    display: inline-block;
-                    background-color: #722ed1;
-                    color: white;
-                    font-size: 0.8em;
-                    padding: 2px 8px;
-                    border-radius: 10px;
-                    margin-left: 10px;
-                }
-                .detail-button {
-                    background-color: #1890ff;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                    padding: 4px 8px;
-                    font-size: 0.8em;
-                    cursor: pointer;
-                    margin-right: 10px;
-                    transition: background-color 0.3s;
-                }
-                .detail-button:hover {
-                    background-color: #096dd9;
-                }
-                @media (max-width: 768px) {
-                    .detail-view {
-                        width: 80%;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <h1>Research Question Tree</h1>
-            <p>Click on any question to expand/collapse.</p>
-            
-            <div class="tree-container">
-        `;
+        // Use the D3.js tree visualization
+        if (typeof window.renderTreeVisualization === 'function') {
+            console.log('Using D3.js tree visualization');
+            window.renderTreeVisualization(questionTree, metadata, 'tree-visualization');
+            return;
+        }
 
-        // Add the tree structure
-        html += renderNodeHtml(questionTree);
+        // Fallback to a simple visualization if D3.js visualization is not available
+        console.warn('D3.js tree visualization not available, falling back to simple implementation');
 
-        // Add the closing tags (without the script tags)
-        html += `
+        // Clear previous content
+        treeVisualization.innerHTML = '';
+
+        // Add metadata section if available
+        if (metadata) {
+            const metadataHtml = `
+                <div class="tree-metadata">
+                    <div class="metadata-item">
+                        <span class="metadata-label">Total Nodes:</span>
+                        <span class="metadata-value">${metadata.total_nodes || 'N/A'}</span>
+                    </div>
+                    <div class="metadata-item">
+                        <span class="metadata-label">Max Depth:</span>
+                        <span class="metadata-value">${metadata.max_depth || 'N/A'}</span>
+                    </div>
+                    <div class="metadata-item">
+                        <span class="metadata-label">Processing Time:</span>
+                        <span class="metadata-value">${metadata.processing_time || 'N/A'}</span>
+                    </div>
+                </div>
+            `;
+            treeVisualization.insertAdjacentHTML('beforeend', metadataHtml);
+        }
+
+        // Simple fallback visualization
+        const fallbackHtml = `
+            <div style="padding: 20px; background-color: #f8f9fa; border-radius: 8px; margin-top: 20px;">
+                <h3>${questionTree.question}</h3>
+                ${questionTree.answer ? `<p>${questionTree.answer}</p>` : ''}
+                ${questionTree.children && questionTree.children.length > 0 ? `
+                    <h4>Sub-questions:</h4>
+                    <ul>
+                        ${questionTree.children.map(child => `
+                            <li>
+                                <strong>${child.question}</strong>
+                                ${child.answer ? `<p>${child.answer}</p>` : ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                ` : ''}
             </div>
-        </body>
-        </html>
         `;
-
-        return html;
+        treeVisualization.insertAdjacentHTML('beforeend', fallbackHtml);
     }
 
     // Global function to toggle node expansion
-    // This needs to be in the global scope to be accessible from the HTML
     window.toggleNode = function (nodeId) {
         const node = document.getElementById(nodeId);
         if (!node) return;
@@ -507,144 +412,6 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 icon.textContent = '+';
             }
-        }
-    };
-
-    // Global function to show node details
-    // This needs to be in the global scope to be accessible from the HTML
-    window.showDetails = function (nodeId, isQuestion) {
-        try {
-            const node = document.getElementById(nodeId);
-            if (!node) {
-                console.error(`Node with ID ${nodeId} not found`);
-                return;
-            }
-
-            // Create or get the detail view container
-            let detailView = document.getElementById('detailView');
-            if (!detailView) {
-                detailView = document.createElement('div');
-                detailView.id = 'detailView';
-                detailView.className = 'detail-view';
-                detailView.innerHTML = `
-                    <button class="detail-view-close" onclick="window.closeDetailView()">&times;</button>
-                    <h2 class="detail-view-title" id="detailViewTitle">Question Details</h2>
-                    <div class="detail-view-content" id="detailViewContent"></div>
-                `;
-                document.body.appendChild(detailView);
-
-                // Add styles if not already present
-                if (!document.getElementById('detail-view-styles')) {
-                    const style = document.createElement('style');
-                    style.id = 'detail-view-styles';
-                    style.textContent = `
-                        .detail-view {
-                            position: fixed;
-                            top: 0;
-                            right: 0;
-                            width: 40%;
-                            height: 100%;
-                            background: white;
-                            border-left: 1px solid #ccc;
-                            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-                            padding: 20px;
-                            overflow-y: auto;
-                            transform: translateX(100%);
-                            transition: transform 0.3s ease;
-                            z-index: 1000;
-                        }
-                        .detail-view.active {
-                            transform: translateX(0);
-                        }
-                        .detail-view-close {
-                            position: absolute;
-                            top: 10px;
-                            right: 10px;
-                            font-size: 24px;
-                            cursor: pointer;
-                            background: none;
-                            border: none;
-                        }
-                        .detail-view-title {
-                            margin-top: 0;
-                            padding-right: 30px;
-                        }
-                        .detail-view-content {
-                            margin-top: 20px;
-                        }
-                    `;
-                    document.head.appendChild(style);
-                }
-            }
-
-            const detailViewTitle = document.getElementById('detailViewTitle');
-            const detailViewContent = document.getElementById('detailViewContent');
-
-            if (!detailViewTitle || !detailViewContent) {
-                console.error('Detail view elements not found');
-                return;
-            }
-
-            if (isQuestion) {
-                const nodeTitle = node.querySelector('.node-title');
-                if (!nodeTitle) {
-                    console.error('Node title element not found');
-                    detailViewTitle.textContent = 'Question Details';
-                    detailViewContent.innerHTML = '<p>Unable to load question details.</p>';
-                } else {
-                    const questionText = nodeTitle.textContent.split(':')[1]?.trim() || 'Unknown Question';
-                    detailViewTitle.textContent = 'Question: ' + questionText;
-
-                    // Check if this node has children or an answer
-                    const children = node.querySelector('.children');
-                    const answer = node.querySelector('.answer-node');
-
-                    let content = '';
-                    if (children && children.childElementCount > 0) {
-                        content = '<h3>Sub-questions:</h3><ul>';
-                        const subQuestions = children.querySelectorAll('.node-title');
-                        subQuestions.forEach(sq => {
-                            const subQuestionText = sq.textContent.split(':')[1]?.trim() || 'Unknown Question';
-                            content += '<li>' + subQuestionText + '</li>';
-                        });
-                        content += '</ul>';
-                    } else if (answer) {
-                        content = '<h3>Answer:</h3>' + answer.innerHTML;
-                    } else {
-                        content = '<p>No answer or sub-questions available.</p>';
-                    }
-
-                    detailViewContent.innerHTML = content;
-                }
-            } else {
-                // It's an answer node
-                const questionNode = node.closest('.question-node');
-                if (!questionNode) {
-                    console.error('Parent question node not found');
-                    detailViewTitle.textContent = 'Answer Details';
-                    detailViewContent.innerHTML = node.innerHTML || '<p>Unable to load answer details.</p>';
-                } else {
-                    const nodeTitle = questionNode.querySelector('.node-title');
-                    const questionText = nodeTitle ? nodeTitle.textContent.split(':')[1]?.trim() || 'Unknown Question' : 'Unknown Question';
-                    detailViewTitle.textContent = 'Answer to: ' + questionText;
-
-                    // Get the answer content
-                    detailViewContent.innerHTML = node.innerHTML || '<p>No answer content available.</p>';
-                }
-            }
-
-            detailView.classList.add('active');
-        } catch (error) {
-            console.error('Error in showDetails:', error);
-            showError('An error occurred while showing details. Please try again.');
-        }
-    };
-
-    // Global function to close detail view
-    window.closeDetailView = function () {
-        const detailView = document.getElementById('detailView');
-        if (detailView) {
-            detailView.classList.remove('active');
         }
     };
 
@@ -674,6 +441,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     lowestDepthNode.classList.add('expanded');
                     const icon = lowestDepthNode.querySelector('.toggle-icon');
                     if (icon) icon.textContent = '−';
+
+                    // Also expand all level 1 nodes by default
+                    const level1Nodes = document.querySelectorAll('.question-node[data-depth="1"]');
+                    level1Nodes.forEach(node => {
+                        node.classList.add('expanded');
+                        const nodeIcon = node.querySelector('.toggle-icon');
+                        if (nodeIcon) nodeIcon.textContent = '−';
+                    });
                 } else {
                     console.error('Could not find any question nodes to initialize');
                 }
@@ -681,61 +456,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 rootNode.classList.add('expanded');
                 const icon = rootNode.querySelector('.toggle-icon');
                 if (icon) icon.textContent = '−';
+
+                // Also expand all level 1 nodes by default
+                const level1Nodes = document.querySelectorAll('.question-node[data-depth="1"]');
+                level1Nodes.forEach(node => {
+                    node.classList.add('expanded');
+                    const nodeIcon = node.querySelector('.toggle-icon');
+                    if (nodeIcon) nodeIcon.textContent = '−';
+                });
             }
         } catch (error) {
             console.error('Error initializing tree:', error);
         }
-    }
-
-    // Helper function to render a single node
-    function renderNodeHtml(node, path = "") {
-        if (!node) return '';
-
-        const depth = node.depth || 0;
-        const nodeId = node.id || 'node-' + Math.random().toString(36).substr(2, 9);
-
-        // Add special classes for max depth or broad topic nodes
-        const maxDepthClass = node.max_depth_reached ? " max-depth-node" : "";
-        const broadTopicClass = node.is_vague ? " broad-topic-node" : "";
-
-        // Create the path for this node
-        const questionText = node.question || '';
-        const shortQuestion = questionText.length > 20 ? questionText.substring(0, 20) + '...' : questionText;
-        const currentPath = path + (path ? " > " + shortQuestion : "");
-
-        let html = `
-        <div class="node question-node${maxDepthClass}${broadTopicClass}" id="${nodeId}" data-depth="${depth}">
-            <div class="node-header" onclick="window.toggleNode('${nodeId}')">
-                <span class="depth-indicator">Level ${depth}</span>
-                <span class="node-title">Question: ${questionText}</span>
-                <span class="toggle-icon">+</span>
-            </div>
-            <div class="node-content">
-                <button class="detail-button" onclick="window.showDetails('${nodeId}', true); event.stopPropagation();">View Details</button>
-                ${node.max_depth_reached ? '<span class="max-depth-badge">Max Depth</span>' : ''}
-                ${node.is_vague ? '<span class="broad-topic-badge">Broad Topic</span>' : ''}
-            </div>
-        `;
-
-        if (node.needs_breakdown && node.children && node.children.length > 0) {
-            html += '<div class="children">';
-            for (const child of node.children) {
-                html += renderNodeHtml(child, currentPath);
-            }
-            html += '</div>';
-        } else if (node.answer) {
-            const answerId = `answer-${nodeId}`;
-            html += `
-            <div class="answer-node" id="${answerId}">
-                <h3>Answer:</h3>
-                <div>${node.answer}</div>
-                <button class="detail-button" onclick="window.showDetails('${answerId}', false); event.stopPropagation();">View Full Answer</button>
-            </div>
-            `;
-        }
-
-        html += '</div>';
-        return html;
     }
 
     // Function to load LZString library
