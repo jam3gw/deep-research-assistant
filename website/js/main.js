@@ -162,11 +162,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 // Check for specific error types
                 if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
-                    errorMessage = 'The request timed out. Your question might be too complex. Please try a more specific question or try again later.';
+                    errorMessage = 'The request timed out. Your question might be too complex or requires extensive research. Please try a more specific question or try again later.';
                 } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
                     errorMessage = 'A network error occurred. Please check your internet connection and try again.';
                 } else if (errorMessage.includes('500')) {
                     errorMessage = 'The research engine encountered an internal error. Please try again with a different question.';
+                } else if (errorMessage.includes('AbortError')) {
+                    errorMessage = 'The request was aborted after waiting too long. Your question might require extensive research. Please try a more specific question.';
                 }
 
                 showError(errorMessage);
