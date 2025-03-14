@@ -713,7 +713,7 @@
 }
 
 .sources.collapsed h2::after {
-    content: "▲";
+    content: "►";
 }
 
 .sources ol {

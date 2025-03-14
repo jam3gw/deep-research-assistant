@@ -348,8 +348,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     sourcesDiv.classList.toggle('collapsed');
                 });
 
-                // Start with sources expanded by default
-                sourcesDiv.classList.remove('collapsed');
+                // Start with sources collapsed by default
+                sourcesDiv.classList.add('collapsed');
 
                 // Update heading to show source count
                 const sourceItems = sourcesDiv.querySelectorAll('ol > li');
